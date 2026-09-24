@@ -407,12 +407,59 @@ def merge_guest_with_checkin(guest: dict, checkins: dict) -> dict:
     }
 
 
+def extract_candidate_ids(raw_id: str) -> list[str]:
+    candidates = []
+    cleaned = (raw_id or "").strip()
+    if not cleaned:
+        return candidates
+
+    candidates.append(cleaned)
+    candidates.append(cleaned.upper())
+
+    if "?" in cleaned or "=" in cleaned or "/" in cleaned:
+        try:
+            from urllib.parse import urlparse, parse_qs, unquote
+            unquoted = unquote(cleaned)
+            if unquoted not in candidates:
+                candidates.append(unquoted)
+                candidates.append(unquoted.upper())
+            parsed = urlparse(unquoted)
+            qs = parse_qs(parsed.query)
+            for k in ["id", "code", "codigo", "invitado", "guest", "uid", "q"]:
+                if k in qs and qs[k]:
+                    for val in qs[k]:
+                        v = val.strip()
+                        if v and v not in candidates:
+                            candidates.append(v)
+                            candidates.append(v.upper())
+            parts = [p.strip() for p in parsed.path.split("/") if p.strip()]
+            if parts:
+                last_p = parts[-1]
+                if last_p and last_p not in candidates:
+                    candidates.append(last_p)
+                    candidates.append(last_p.upper())
+        except Exception:
+            pass
+
+    seen = set()
+    result = []
+    for c in candidates:
+        if c and c not in seen:
+            seen.add(c)
+            result.append(c)
+    return result
+
+
 def find_guest(guest_id: str) -> dict | None:
-    guest_id = guest_id.strip().upper()
+    if not guest_id:
+        return None
+    candidates = extract_candidate_ids(guest_id)
     checkins = load_checkins()
-    for g in GUESTS:
-        if g["id"].strip().upper() == guest_id:
-            return merge_guest_with_checkin(g, checkins)
+    for cand in candidates:
+        cand_upper = cand.upper()
+        for g in GUESTS:
+            if g.get("id", "").strip().upper() == cand_upper:
+                return merge_guest_with_checkin(g, checkins)
     return None
 
 
@@ -509,64 +556,116 @@ def add_or_update_guest(guest_data: dict) -> dict:
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Generador de Etiqueta — Brother QL-800 con rollo DK-1208 (38mm × 90.3mm)
-# Formato Grande sin QR: enfocado en Nombres, Empresa y Cargo a máxima legibilidad
+# Formato exclusivo para emblema pre-impreso: Solo Nombre y apellidos, Empresa y Puesto.
+# Máxima legibilidad, contraste sólido en negro y auto-ajuste de tipografía.
 # Dimensiones en horizontal: 991 px de ancho × 413 px de alto a 300 DPI
 # ─────────────────────────────────────────────────────────────────────────────
 
-def build_label_image(guest: dict) -> Image.Image:
-    try:
-        from config import EVENT_NAME
-    except ImportError:
-        EVENT_NAME = "EVENTO DEMO 2026"
+def fit_font(text: str, initial_size: int, max_width: int, bold: bool = True, min_size: int = 18):
+    size = initial_size
+    font = get_font(size, bold=bold)
+    while size > min_size:
+        bbox = font.getbbox(text)
+        text_w = bbox[2] - bbox[0]
+        if text_w <= max_width:
+            return font, size
+        size -= 2
+        font = get_font(size, bold=bold)
+    return font, size
 
+
+def split_name_balanced(name: str) -> tuple[str, str]:
+    words = name.split()
+    if len(words) <= 1:
+        return name, ""
+    best_diff = float("inf")
+    best_split = len(words) // 2
+    for i in range(1, len(words)):
+        l1 = " ".join(words[:i])
+        l2 = " ".join(words[i:])
+        diff = abs(len(l1) - len(l2))
+        if diff < best_diff:
+            best_diff = diff
+            best_split = i
+    return " ".join(words[:best_split]), " ".join(words[best_split:])
+
+
+def build_label_image(guest: dict) -> Image.Image:
+    """
+    Genera la imagen del sticker para pegar sobre el emblema del evento.
+    Elementos exclusivos a imprimir: Nombre y apellidos, Empresa y Puesto.
+    Sin logos, sin cabeceras, sin pie de página ni código QR.
+    """
     W, H = LABEL_WIDTH_PX, LABEL_HEIGHT_PX
     img = Image.new("RGB", (W, H), "white")
     draw = ImageDraw.Draw(img)
 
-    # 1. Encabezado del evento (Franja azul superior)
-    draw.rectangle([25, 14, 966, 68], fill=(20, 60, 140))
-    draw.text((W // 2, 41), EVENT_NAME, font=get_font(24, bold=True), fill="white", anchor="mm")
+    name = (guest.get("name") or guest.get("full_name") or guest.get("Nombres y Apellidos") or "").strip()
+    company = (guest.get("company") or guest.get("Empresa") or "").strip()
+    position = (guest.get("position") or guest.get("Cargo") or guest.get("Puesto") or "").strip()
 
-    # 2. Nombre del Invitado (Tipografía grande, destacada y centrada)
-    name = (guest.get("name") or guest.get("full_name") or guest.get("id") or "").strip()
+    max_w = W - 100  # 891 px de margen seguro lateral
     words = name.split()
+    is_multi_line = len(name) > 22 and len(words) > 1
 
-    if len(name) > 22 and len(words) > 1:
-        mid = len(words) // 2
-        lines = [" ".join(words[:mid]), " ".join(words[mid:])]
-        font_name = get_font(42, bold=True)
-        draw.text((W // 2, 110), lines[0], font=font_name, fill=(15, 20, 30), anchor="mm")
-        draw.text((W // 2, 156), lines[1], font=font_name, fill=(15, 20, 30), anchor="mm")
-        y_sep = 196
+    has_company = bool(company)
+    has_position = bool(position)
+
+    if has_company and has_position:
+        if is_multi_line:
+            line1, line2 = split_name_balanced(name)
+            f_name1, _ = fit_font(line1, 52, max_w, bold=True)
+            f_name2, _ = fit_font(line2, 52, max_w, bold=True)
+            draw.text((W // 2, 92), line1, font=f_name1, fill=(0, 0, 0), anchor="mm")
+            draw.text((W // 2, 148), line2, font=f_name2, fill=(0, 0, 0), anchor="mm")
+        else:
+            f_name, _ = fit_font(name, 64, max_w, bold=True)
+            draw.text((W // 2, 120), name, font=f_name, fill=(0, 0, 0), anchor="mm")
+
+        f_comp, _ = fit_font(company, 38, max_w, bold=True)
+        draw.text((W // 2, 238), company, font=f_comp, fill=(0, 0, 0), anchor="mm")
+
+        f_pos, _ = fit_font(position, 32, max_w, bold=False)
+        draw.text((W // 2, 312), position, font=f_pos, fill=(0, 0, 0), anchor="mm")
+
+    elif has_company:
+        if is_multi_line:
+            line1, line2 = split_name_balanced(name)
+            f_name1, _ = fit_font(line1, 56, max_w, bold=True)
+            f_name2, _ = fit_font(line2, 56, max_w, bold=True)
+            draw.text((W // 2, 115), line1, font=f_name1, fill=(0, 0, 0), anchor="mm")
+            draw.text((W // 2, 175), line2, font=f_name2, fill=(0, 0, 0), anchor="mm")
+        else:
+            f_name, _ = fit_font(name, 68, max_w, bold=True)
+            draw.text((W // 2, 155), name, font=f_name, fill=(0, 0, 0), anchor="mm")
+
+        f_comp, _ = fit_font(company, 42, max_w, bold=True)
+        draw.text((W // 2, 275), company, font=f_comp, fill=(0, 0, 0), anchor="mm")
+
+    elif has_position:
+        if is_multi_line:
+            line1, line2 = split_name_balanced(name)
+            f_name1, _ = fit_font(line1, 56, max_w, bold=True)
+            f_name2, _ = fit_font(line2, 56, max_w, bold=True)
+            draw.text((W // 2, 115), line1, font=f_name1, fill=(0, 0, 0), anchor="mm")
+            draw.text((W // 2, 175), line2, font=f_name2, fill=(0, 0, 0), anchor="mm")
+        else:
+            f_name, _ = fit_font(name, 68, max_w, bold=True)
+            draw.text((W // 2, 155), name, font=f_name, fill=(0, 0, 0), anchor="mm")
+
+        f_pos, _ = fit_font(position, 40, max_w, bold=True)
+        draw.text((W // 2, 275), position, font=f_pos, fill=(0, 0, 0), anchor="mm")
+
     else:
-        font_name = get_font(52, bold=True)
-        draw.text((W // 2, 130), name, font=font_name, fill=(15, 20, 30), anchor="mm")
-        y_sep = 175
-
-    # 3. Línea divisoria elegante
-    draw.line([(70, y_sep), (921, y_sep)], fill=(210, 215, 225), width=2)
-
-    # 4. Empresa y Cargo (Centrados y con jerarquía visual)
-    company = guest.get("company", "").strip()
-    position = guest.get("position", "").strip()
-
-    if company and position:
-        comp_display = company if len(company) <= 38 else company[:36] + "…"
-        draw.text((W // 2, y_sep + 40), comp_display, font=get_font(34, bold=True), fill=(20, 60, 140), anchor="mm")
-        pos_display = position if len(position) <= 42 else position[:40] + "…"
-        draw.text((W // 2, y_sep + 88), pos_display, font=get_font(28, bold=False), fill=(60, 65, 75), anchor="mm")
-    elif company:
-        comp_display = company if len(company) <= 38 else company[:36] + "…"
-        draw.text((W // 2, y_sep + 65), comp_display, font=get_font(36, bold=True), fill=(20, 60, 140), anchor="mm")
-    elif position:
-        pos_display = position if len(position) <= 42 else position[:40] + "…"
-        draw.text((W // 2, y_sep + 65), pos_display, font=get_font(32, bold=True), fill=(60, 65, 75), anchor="mm")
-
-    # 5. Pie de etiqueta inferior
-    draw.line([(40, 360), (951, 360)], fill=(225, 230, 238), width=1)
-    gid = guest.get("id", "")
-    draw.text((60, 385), f"ID: {gid}", font=get_font(18, bold=True), fill=(120, 125, 135), anchor="lm")
-    draw.text((W - 60, 385), "ACCESO OFICIAL", font=get_font(18, bold=True), fill=(22, 163, 74), anchor="rm")
+        if is_multi_line:
+            line1, line2 = split_name_balanced(name)
+            f_name1, _ = fit_font(line1, 60, max_w, bold=True)
+            f_name2, _ = fit_font(line2, 60, max_w, bold=True)
+            draw.text((W // 2, 175), line1, font=f_name1, fill=(0, 0, 0), anchor="mm")
+            draw.text((W // 2, 238), line2, font=f_name2, fill=(0, 0, 0), anchor="mm")
+        else:
+            f_name, _ = fit_font(name, 76, max_w, bold=True)
+            draw.text((W // 2, 206), name, font=f_name, fill=(0, 0, 0), anchor="mm")
 
     return img
 
@@ -575,9 +674,193 @@ def build_label_image(guest: dict) -> Image.Image:
 # Impresión Directa en Windows (GDI / Brother QL-800 Spooler)
 # ─────────────────────────────────────────────────────────────────────────────
 
+def get_printer_connection_status(printer_name: str = PRINTER_NAME) -> dict:
+    """
+    Comprueba de forma rigurosa si la impresora Brother está instalada Y FÍSICAMENTE CONECTADA / ONLINE.
+    Verifica atributos del spooler de Windows (Offline, Error, Puertos, Jobs).
+    """
+    if not PRINTER_ENABLED:
+        return {
+            "enabled": False,
+            "installed": True,
+            "online": True,
+            "is_ready": True,
+            "name": printer_name,
+            "status_text": "Impresión simulada (deshabilitada en config)",
+            "details": "Modo de simulación activo",
+            "jobs_in_queue": 0,
+        }
+
+    if not WIN32_AVAILABLE:
+        return {
+            "enabled": True,
+            "installed": False,
+            "online": False,
+            "is_ready": False,
+            "name": printer_name,
+            "status_text": "Módulo win32print no disponible en este sistema",
+            "details": "Falta pywin32",
+            "jobs_in_queue": 0,
+        }
+
+    try:
+        printers = [p[2] for p in win32print.EnumPrinters(win32print.PRINTER_ENUM_LOCAL | win32print.PRINTER_ENUM_CONNECTIONS)]
+        target = None
+        for p in printers:
+            if printer_name.lower() in p.lower():
+                target = p
+                break
+
+        if not target:
+            return {
+                "enabled": True,
+                "installed": False,
+                "online": False,
+                "is_ready": False,
+                "name": printer_name,
+                "status_text": f"Impresora '{printer_name}' no encontrada en Windows",
+                "details": f"Disponibles: {printers}",
+                "jobs_in_queue": 0,
+            }
+
+        # Abrir handle de la impresora para inspeccionar estado en tiempo real
+        hPrinter = win32print.OpenPrinter(target)
+        try:
+            p_info = win32print.GetPrinter(hPrinter, 2)
+            jobs = win32print.EnumJobs(hPrinter, 0, 100, 1)
+            jobs_count = len(jobs)
+        finally:
+            win32print.ClosePrinter(hPrinter)
+
+        attrs = p_info.get("Attributes", 0)
+        status_flags = p_info.get("Status", 0)
+        port_name = p_info.get("pPortName", "")
+
+        # Verificar si Windows tiene la impresora en modo Desconectada / Fuera de línea (Offline)
+        is_offline_attr = bool(attrs & win32print.PRINTER_ATTRIBUTE_WORK_OFFLINE)
+        is_offline_status = bool(status_flags & win32print.PRINTER_STATUS_OFFLINE)
+        is_not_available = bool(status_flags & win32print.PRINTER_STATUS_NOT_AVAILABLE)
+        is_error = bool(status_flags & win32print.PRINTER_STATUS_ERROR)
+        is_paper_jam = bool(status_flags & win32print.PRINTER_STATUS_PAPER_JAM)
+        is_paper_out = bool(status_flags & win32print.PRINTER_STATUS_PAPER_OUT)
+        is_door_open = bool(status_flags & win32print.PRINTER_STATUS_DOOR_OPEN)
+        is_paused = bool(status_flags & win32print.PRINTER_STATUS_PAUSED)
+
+        if is_offline_attr or is_offline_status:
+            return {
+                "enabled": True,
+                "installed": True,
+                "online": False,
+                "is_ready": False,
+                "name": target,
+                "status_text": f"Desconectada o Apagada (Offline en {port_name})",
+                "details": "El cable USB está desconectado o la impresora está apagada.",
+                "jobs_in_queue": jobs_count,
+            }
+
+        if is_not_available:
+            return {
+                "enabled": True,
+                "installed": True,
+                "online": False,
+                "is_ready": False,
+                "name": target,
+                "status_text": f"No disponible (Puerto: {port_name})",
+                "details": "La impresora no responde en el puerto asignado.",
+                "jobs_in_queue": jobs_count,
+            }
+
+        if is_paper_out:
+            return {
+                "enabled": True,
+                "installed": True,
+                "online": True,
+                "is_ready": False,
+                "name": target,
+                "status_text": "Sin papel / Cinta DK-1208 agotada",
+                "details": "Coloque un nuevo rollo DK-1208 en la impresora.",
+                "jobs_in_queue": jobs_count,
+            }
+
+        if is_paper_jam:
+            return {
+                "enabled": True,
+                "installed": True,
+                "online": True,
+                "is_ready": False,
+                "name": target,
+                "status_text": "Atasco de papel detectado",
+                "details": "Revise el mecanismo de corte y salida de etiqueta.",
+                "jobs_in_queue": jobs_count,
+            }
+
+        if is_door_open:
+            return {
+                "enabled": True,
+                "installed": True,
+                "online": True,
+                "is_ready": False,
+                "name": target,
+                "status_text": "Cubierta abierta",
+                "details": "Cierre la tapa superior de la impresora Brother.",
+                "jobs_in_queue": jobs_count,
+            }
+
+        if is_paused:
+            return {
+                "enabled": True,
+                "installed": True,
+                "online": False,
+                "is_ready": False,
+                "name": target,
+                "status_text": "Impresora Pausada en Windows",
+                "details": "Reanude la impresora en la cola de impresión de Windows.",
+                "jobs_in_queue": jobs_count,
+            }
+
+        if is_error:
+            return {
+                "enabled": True,
+                "installed": True,
+                "online": False,
+                "is_ready": False,
+                "name": target,
+                "status_text": "Error de hardware reportado por la impresora",
+                "details": "Verifique el estado del LED de la impresora Brother.",
+                "jobs_in_queue": jobs_count,
+            }
+
+        # Impresora online y lista
+        return {
+            "enabled": True,
+            "installed": True,
+            "online": True,
+            "is_ready": True,
+            "name": target,
+            "status_text": f"Conectada y Lista ({port_name})",
+            "details": f"Lista para imprimir en rollo {LABEL_TYPE}",
+            "jobs_in_queue": jobs_count,
+        }
+
+    except Exception as e:
+        log.error(f"Error comprobando estado de impresora: {e}")
+        return {
+            "enabled": True,
+            "installed": False,
+            "online": False,
+            "is_ready": False,
+            "name": printer_name,
+            "status_text": f"Error al verificar impresora: {str(e)}",
+            "details": str(e),
+            "jobs_in_queue": 0,
+        }
+
+
 def print_label(guest: dict, printer_name: str = PRINTER_NAME) -> dict:
     """
     Imprime la etiqueta del invitado en la impresora Brother QL-800 usando el spooler GDI nativo de Windows.
+    Verifica primero que la impresora esté físicamente conectada y lista (Online) para evitar que trabajos
+    queden retenidos en la cola cuando la impresora está apagada o desenchufada.
     """
     if not PRINTER_ENABLED:
         log.info(f"[SIMULADO] Impresión de prueba para: {guest['id']} — {guest.get('name')}")
@@ -586,20 +869,17 @@ def print_label(guest: dict, printer_name: str = PRINTER_NAME) -> dict:
     if not WIN32_AVAILABLE:
         return {"status": "error", "message": "El módulo pywin32 no está disponible en este entorno."}
 
-    # Verificar si la impresora existe en Windows
-    installed_printers = [p[2] for p in win32print.EnumPrinters(win32print.PRINTER_ENUM_LOCAL | win32print.PRINTER_ENUM_CONNECTIONS)]
-    target_printer = None
-    for p in installed_printers:
-        if printer_name.lower() in p.lower():
-            target_printer = p
-            break
-
-    if not target_printer:
-        log.error(f"No se encontró la impresora '{printer_name}'. Impresoras disponibles: {installed_printers}")
+    # VERIFICACIÓN ESTRICTA DE CONEXIÓN FÍSICA Y ESTADO ONLINE
+    p_status = get_printer_connection_status(printer_name)
+    if not p_status.get("is_ready"):
+        log.warning(f"Impresión cancelada. La impresora no está lista: {p_status.get('status_text')}")
         return {
-            "status": "error",
-            "message": f"Impresora '{printer_name}' no encontrada. Conéctala o revisa su nombre en Windows."
+            "status": "printer_offline",
+            "message": f"Impresora no lista: {p_status.get('status_text')}. Conecta y enciende la Brother QL-800.",
+            "printer_status": p_status
         }
+
+    target_printer = p_status.get("name") or printer_name
 
     try:
         label_img = build_label_image(guest)
@@ -653,12 +933,17 @@ def api_guests():
     return jsonify(result)
 
 
-@app.route("/api/guest/<guest_id>")
+@app.route("/api/guest/<path:guest_id>")
 def api_guest(guest_id):
     guest = find_guest(guest_id)
     if not guest:
-        return jsonify({"error": "Invitado no encontrado", "id": guest_id}), 404
-    faces = face_service.get_guest_faces(guest_id)
+        return jsonify({
+            "status": "not_registered",
+            "error": "Usuario no registrado",
+            "message": "El código o datos no coinciden con ningún invitado registrado.",
+            "id": guest_id
+        }), 404
+    faces = face_service.get_guest_faces(guest.get("id", guest_id))
     guest["faces"] = faces
     guest["face_count"] = len(faces)
     guest["face_enrolled"] = len(faces) > 0
@@ -759,6 +1044,19 @@ def api_print(guest_id):
             "print": result,
             "message": f"No se pudo imprimir el ticket: {result.get('message', 'Error de hardware')}. Check-in pendiente."
         }), 500
+
+
+@app.route("/api/label-preview/<guest_id>")
+def api_label_preview(guest_id):
+    guest = find_guest(guest_id)
+    if not guest:
+        return jsonify({"error": "Invitado no encontrado", "id": guest_id}), 404
+    label_img = build_label_image(guest)
+    buf = io.BytesIO()
+    label_img.save(buf, format="PNG")
+    buf.seek(0)
+    from flask import send_file
+    return send_file(buf, mimetype="image/png")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -888,9 +1186,10 @@ def api_facial_match():
     guest = find_guest(matched_id)
     if not guest:
         return jsonify({
-            "status": "no_match",
+            "status": "not_registered",
+            "guest_id": matched_id,
             "reason": "guest_not_found_in_list",
-            "message": f"Rostro coincide con {matched_id} pero no figura en la lista activa",
+            "message": f"Usuario no registrado en la lista activa ({matched_id})",
         })
 
     # Si se pide auto_checkin (modo normal del Kiosko):
@@ -1237,27 +1536,44 @@ def api_status():
 
 @app.route("/api/printer/status")
 def api_printer_status():
-    installed = False
-    status_text = "Desconectada"
-    if WIN32_AVAILABLE:
-        try:
-            printers = [p[2] for p in win32print.EnumPrinters(win32print.PRINTER_ENUM_LOCAL | win32print.PRINTER_ENUM_CONNECTIONS)]
-            for p in printers:
-                if PRINTER_NAME.lower() in p.lower():
-                    installed = True
-                    status_text = f"Conectada en Windows ({p})"
-                    break
-        except Exception as e:
-            status_text = str(e)
-
+    p_status = get_printer_connection_status(PRINTER_NAME)
     return jsonify({
-        "enabled":     PRINTER_ENABLED,
-        "name":        PRINTER_NAME,
-        "model":       PRINTER_MODEL,
-        "label":       LABEL_TYPE,
-        "installed":   installed,
-        "status_text": status_text,
+        "enabled":       p_status.get("enabled", True),
+        "name":          p_status.get("name", PRINTER_NAME),
+        "model":         PRINTER_MODEL,
+        "label":         LABEL_TYPE,
+        "installed":     p_status.get("installed", False),
+        "online":        p_status.get("online", False),
+        "is_ready":      p_status.get("is_ready", False),
+        "status_text":   p_status.get("status_text", "Desconocido"),
+        "details":       p_status.get("details", ""),
+        "jobs_in_queue": p_status.get("jobs_in_queue", 0),
     })
+
+
+@app.route("/api/printer/purge-jobs", methods=["POST"])
+def api_printer_purge_jobs():
+    """Limpia y cancela todos los trabajos pendientes o atascados en la cola de la impresora."""
+    if not WIN32_AVAILABLE:
+        return jsonify({"error": "win32print no disponible"}), 400
+
+    try:
+        printers = [p[2] for p in win32print.EnumPrinters(win32print.PRINTER_ENUM_LOCAL | win32print.PRINTER_ENUM_CONNECTIONS)]
+        target = next((p for p in printers if PRINTER_NAME.lower() in p.lower()), None)
+        if not target:
+            return jsonify({"error": "Impresora no encontrada"}), 404
+
+        h = win32print.OpenPrinter(target, {"DesiredAccess": win32print.PRINTER_ALL_ACCESS})
+        try:
+            win32print.SetPrinter(h, 0, None, win32print.PRINTER_CONTROL_PURGE)
+        finally:
+            win32print.ClosePrinter(h)
+
+        log.info(f"Cola de impresión purgada para {target}")
+        return jsonify({"status": "ok", "message": "Cola de impresión limpiada exitosamente"})
+    except Exception as e:
+        log.error(f"Error purgando cola de impresión: {e}")
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/api/qr-samples")

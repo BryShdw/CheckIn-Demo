@@ -84,23 +84,22 @@
     }
     .mode-pill button:hover:not(.active) {
       color: var(--text);
-      background: rgba(255, 255, 255, 0.06);
+      background: var(--surface3);
     }
     .mode-pill button.active {
       background: var(--accent);
       color: #ffffff;
-      box-shadow: 0 2px 8px var(--accent-glow);
       font-weight: 700;
     }
     #admin-mode-manual.active {
-      background: linear-gradient(135deg, #f59e0b, #d97706);
+      background: var(--warn);
       color: #ffffff;
-      box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4);
+      font-weight: 700;
     }
     #admin-mode-auto.active {
-      background: linear-gradient(135deg, #10b981, #059669);
+      background: var(--success);
       color: #ffffff;
-      box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
+      font-weight: 700;
     }
 
 
@@ -210,31 +209,34 @@
 
 <header>
   <a class="logo" href="/" style="display:flex; align-items:center; gap:12px; text-decoration:none;">
-    <img src="/static/logo.png" alt="DACER" style="height:32px; object-fit:contain;">
+    <img src="/static/logo-dark.png" alt="DACER" style="height:32px; object-fit:contain;">
     <span style="font-weight:700; font-size:1.1rem; color:var(--text); letter-spacing:-0.01em;">Panel de Control</span>
   </a>
   <div class="header-actions">
-    <a href="/" class="btn">📷 Ir al Escáner</a>
-    <button class="btn" onclick="openAddGuestModal()" style="background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600;">➕ Nuevo Invitado</button>
-    <button class="btn danger" onclick="confirmReset()">♻️ Resetear check-ins</button>
+    <a href="/" class="btn">Ir al Kiosko</a>
+    <button class="btn" onclick="openAddGuestModal()" style="background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600;">Nuevo Invitado</button>
+    <button class="btn danger" onclick="confirmReset()">Reiniciar Asistencias</button>
   </div>
 </header>
 
 <div class="admin-wrap" style="max-width: 1100px;">
   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-    <h1 style="font-size:1.4rem; font-weight:700;">📋 Administración de Invitados y Fichas</h1>
+    <h1 style="font-size:1.35rem; font-weight:700;">Gestión de Invitados y Acreditación</h1>
     <span style="font-size:0.85rem; color:var(--muted);">Cinta: <strong>DK-1208 (38mm × 90.3mm)</strong></span>
   </div>
 
   <!-- Estado de Impresora Brother -->
   <div class="printer-status-bar" id="printer-bar">
-    <div style="display:flex; align-items:center; gap:8px;">
+    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
       <span class="printer-dot" id="printer-dot"></span>
-      <span style="font-size:0.9rem;" id="printer-info">Detectando impresora Brother…</span>
+      <span style="font-size:0.92rem;" id="printer-info">Comprobando conexión de impresora Brother…</span>
     </div>
-    <div style="display:flex; gap:8px;">
-      <button class="btn" style="font-size:0.8rem; padding:6px 12px;" onclick="printSampleTest()">
-        🖨️ Probar Impresión de Etiqueta
+    <div style="display:flex; gap:8px; align-items:center;">
+      <button id="btn-purge-queue" class="btn danger" style="display:none; font-size:0.8rem; padding:6px 12px;" onclick="purgePrinterQueue()">
+        Limpiar Cola (<span id="queue-jobs-count">0</span> pendientes)
+      </button>
+      <button class="btn" style="font-size:0.82rem; padding:6px 14px; font-weight:600;" onclick="manualCheckPrinterStatus()">
+        Comprobar Conexión
       </button>
     </div>
   </div>
@@ -243,7 +245,6 @@
   <div class="kiosk-config-bar" style="background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px 20px; margin-bottom:16px; box-shadow:var(--shadow);">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
       <div style="display:flex; align-items:center; gap:8px;">
-        <span style="font-size:1.2rem;">⚙️</span>
         <span style="font-size:1rem; font-weight:700;">Configuración de Operación del Kiosko</span>
       </div>
       <span style="font-size:0.8rem; color:var(--muted); background:var(--surface2); padding:4px 10px; border-radius:20px; border:1px solid var(--border);">
@@ -258,9 +259,9 @@
           1. Método de Acreditación
         </label>
         <div class="mode-pill" style="display:flex; width:100%; justify-content:space-between;">
-          <button type="button" id="admin-meth-both" class="active" onclick="updateKioskSetting('method', 'both')" style="flex:1;">🔄 QR + Facial</button>
-          <button type="button" id="admin-meth-facial" onclick="updateKioskSetting('method', 'facial')" style="flex:1;">👤 Solo Facial</button>
-          <button type="button" id="admin-meth-qr" onclick="updateKioskSetting('method', 'qr')" style="flex:1;">🎟 Solo QR</button>
+          <button type="button" id="admin-meth-both" class="active" onclick="updateKioskSetting('method', 'both')" style="flex:1;">QR + Facial</button>
+          <button type="button" id="admin-meth-facial" onclick="updateKioskSetting('method', 'facial')" style="flex:1;">Solo Facial</button>
+          <button type="button" id="admin-meth-qr" onclick="updateKioskSetting('method', 'qr')" style="flex:1;">Solo QR</button>
         </div>
         <div style="font-size:0.75rem; color:var(--muted); margin-top:6px;" id="admin-method-desc">
           Permite escanear código QR y reconocer rostros en simultáneo.
@@ -273,8 +274,8 @@
           2. Modo de Impresión & Confirmación
         </label>
         <div class="mode-pill" style="display:flex; width:100%; justify-content:space-between;">
-          <button type="button" id="admin-mode-manual" class="active" onclick="updateKioskSetting('mode', 'manual')" style="flex:1;">✋ Manual</button>
-          <button type="button" id="admin-mode-auto" onclick="updateKioskSetting('mode', 'auto')" style="flex:1;">⚡ Automático</button>
+          <button type="button" id="admin-mode-manual" class="active" onclick="updateKioskSetting('mode', 'manual')" style="flex:1;">Manual</button>
+          <button type="button" id="admin-mode-auto" onclick="updateKioskSetting('mode', 'auto')" style="flex:1;">Automático</button>
         </div>
         <div style="font-size:0.75rem; color:var(--muted); margin-top:6px;" id="admin-mode-desc">
           <strong>Manual:</strong> Muestra los datos y espera pulsar "Imprimir".<br><strong>Auto:</strong> Imprime directamente al detectar el rostro o QR.
@@ -306,12 +307,11 @@
   <div class="onedrive-bar" id="onedrive-bar" style="flex-direction:column; gap:14px; padding:16px;">
     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; width:100%;">
       <div style="display:flex; align-items:center; gap:8px;">
-        <span style="font-size:1.15rem;">☁️</span>
         <span style="font-size:0.95rem; font-weight:700;">Documentos de Invitados en OneDrive / SharePoint</span>
       </div>
       <div style="display:flex; gap:8px; align-items:center;">
         <button class="btn" onclick="openAddDocModal()" style="font-size:0.85rem; font-weight:600; background:rgba(204,35,43,0.15); border-color:rgba(204,35,43,0.4); color:var(--accent);">
-          ➕ Agregar Enlace OneDrive
+          Agregar Enlace OneDrive
         </button>
       </div>
     </div>
@@ -325,10 +325,10 @@
         <option value="">Cargando documentos…</option>
       </select>
       <button class="btn" id="btn-sync-doc" onclick="syncActiveDoc()" style="font-size:0.85rem; padding:8px 14px;" title="Descargar la última versión desde OneDrive">
-        🔄 Sincronizar
+        Sincronizar
       </button>
       <button class="btn danger" id="btn-del-doc" onclick="deleteActiveDoc()" style="font-size:0.85rem; padding:8px 14px;" title="Eliminar este enlace y su archivo en caché">
-        🗑️ Eliminar
+        Eliminar
       </button>
     </div>
 
@@ -358,7 +358,7 @@
 
   <!-- Barra de búsqueda y filtro -->
   <div class="search-filter-box">
-    <input type="text" id="filter-input" class="search-filter-input" placeholder="🔍 Buscar por nombre, ID, empresa o cargo…" oninput="filterTable()">
+    <input type="text" id="filter-input" class="search-filter-input" placeholder="Buscar por nombre, ID, empresa o cargo…" oninput="filterTable()">
     <select id="status-filter" class="btn" onchange="filterTable()" style="padding:10px 14px;">
       <option value="all">Todos los estados</option>
       <option value="checked">Solo Registrados</option>
@@ -391,7 +391,7 @@
 <!-- Modal para Agregar / Editar Invitado -->
 <div class="modal-backdrop" id="guest-modal">
   <div class="modal-box">
-    <div class="modal-title"><span>➕</span><span>Registrar Nuevo Invitado</span></div>
+    <div class="modal-title">Registrar Nuevo Invitado</div>
     <form id="guest-form" onsubmit="submitGuestForm(event)">
       <div class="form-group">
         <label for="m-id">Código / ID *</label>
@@ -420,7 +420,7 @@
 <!-- Modal para Agregar Enlace OneDrive -->
 <div class="modal-backdrop" id="doc-modal">
   <div class="modal-box">
-    <div class="modal-title"><span>☁️</span><span>Agregar Enlace OneDrive / SharePoint</span></div>
+    <div class="modal-title">Agregar Enlace OneDrive / SharePoint</div>
     <form id="doc-form" onsubmit="submitAddDocument(event)">
       <div class="form-group">
         <label for="doc-name">Nombre / Alias del Documento *</label>
@@ -446,9 +446,7 @@
   <div class="modal-box" style="max-width: 540px;">
     <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
       <div>
-        <div class="modal-title" style="margin-bottom:4px;">
-          <span>👤</span><span>Enrolamiento Facial</span>
-        </div>
+        <div class="modal-title" style="margin-bottom:4px;">Enrolamiento Facial</div>
         <div style="font-size:0.88rem; color:var(--text); font-weight:600;" id="face-modal-guest-name">—</div>
         <div style="font-size:0.8rem; color:var(--muted); font-family:monospace;" id="face-modal-guest-id">—</div>
       </div>
@@ -464,7 +462,7 @@
     <!-- Guía Visual de Enrolamiento Facial en 4 Pasos -->
     <div style="background:rgba(204, 35, 43, 0.08); border:1px solid rgba(204, 35, 43, 0.25); border-radius:8px; padding:10px 12px; margin-bottom:12px;">
       <div style="font-size:0.75rem; font-weight:700; color:var(--accent); text-transform:uppercase; margin-bottom:6px; display:flex; align-items:center; gap:6px;">
-        <span>💡</span><span>Guía para máxima precisión (evita confusiones y falsos rechazos):</span>
+        <span>Guía para máxima precisión (evita confusiones y falsos rechazos):</span>
       </div>
       <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:6px; font-size:0.72rem; text-align:center;">
         <div style="background:var(--surface2); padding:6px 4px; border-radius:6px; border:1px solid var(--border);">
@@ -496,10 +494,10 @@
     <div id="face-add-section" style="border-top:1px solid var(--border); padding-top:14px;">
       <div style="display:flex; gap:8px; margin-bottom:12px;">
         <button class="btn" id="tab-webcam-btn" onclick="switchFaceTab('webcam')" style="flex:1; font-size:0.82rem; font-weight:600; background:var(--surface2);">
-          📷 Usar Cámara Web
+          Usar Cámara Web
         </button>
         <button class="btn" id="tab-upload-btn" onclick="switchFaceTab('upload')" style="flex:1; font-size:0.82rem; font-weight:600;">
-          📁 Subir Archivos
+          Subir Archivos
         </button>
       </div>
 
@@ -516,7 +514,7 @@
         </div>
         <div style="display:flex; justify-content:center; gap:10px;">
           <button type="button" class="btn" id="btn-snap-face" onclick="captureFaceSnapshot()" style="background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600; padding:10px 20px;">
-            📸 Tomar Foto
+            Tomar Foto
           </button>
         </div>
       </div>
@@ -624,7 +622,7 @@ async function loadDocuments() {
 
     if (!currentDocuments.length) {
       selector.innerHTML = '<option value="">No hay documentos configurados</option>';
-      document.getElementById('doc-meta-info').innerHTML = '<span style="color:var(--danger)">⚠️ No hay ningún enlace de OneDrive configurado.</span>';
+      document.getElementById('doc-meta-info').innerHTML = '<span style="color:var(--danger)">No hay ningún enlace de OneDrive configurado.</span>';
       document.getElementById('doc-sync-info').innerHTML = '';
       return;
     }
@@ -633,7 +631,7 @@ async function loadDocuments() {
       const opt = document.createElement('option');
       opt.value = doc.id;
       const count = doc.guest_count !== undefined ? `${doc.guest_count} invitados` : '—';
-      opt.textContent = `${doc.name} (${count}) ${doc.id === currentActiveDocId ? '★ Activo' : ''}`;
+      opt.textContent = `${doc.name} (${count}) ${doc.id === currentActiveDocId ? '(Activo)' : ''}`;
       if (doc.id === currentActiveDocId) {
         opt.selected = true;
       }
@@ -673,15 +671,15 @@ async function onSelectDocument(docId) {
     });
     const data = await res.json();
     if (data.status === 'ok') {
-      toast(`✅ ${data.message}`, 'success');
+      toast(`${data.message}`, 'success');
       await loadDocuments();
       await loadGuests();
       filterTable();
     } else {
-      toast(`❌ Error: ${data.error || 'No se pudo cambiar'}`, 'error');
+      toast(`Error: ${data.error || 'No se pudo cambiar'}`, 'error');
     }
   } catch (err) {
-    toast(`❌ Error al conectar: ${err.message}`, 'error');
+    toast(`Error al conectar: ${err.message}`, 'error');
   }
 }
 
@@ -692,24 +690,24 @@ async function syncActiveDoc() {
 
   const btn = document.getElementById('btn-sync-doc');
   const prevText = btn.textContent;
-  btn.textContent = '⏳ Sincronizando…';
+  btn.textContent = 'Sincronizando…';
   btn.disabled = true;
 
   try {
     const res = await fetch(`/api/documents/${encodeURIComponent(docId)}/sync`, { method: 'POST' });
     const data = await res.json();
     if (data.status === 'ok') {
-      toast(`✅ ${data.message}`, 'success');
+      toast(`${data.message}`, 'success');
     } else if (data.status === 'warning') {
-      toast(`⚠️ ${data.message}`, 'warn');
+      toast(`${data.message}`, 'warn');
     } else {
-      toast(`❌ Error: ${data.error || data.message || 'Fallo al sincronizar'}`, 'error');
+      toast(`Error: ${data.error || data.message || 'Fallo al sincronizar'}`, 'error');
     }
     await loadDocuments();
     await loadGuests();
     filterTable();
   } catch (err) {
-    toast(`❌ Error de conexión: ${err.message}`, 'error');
+    toast(`Error de conexión: ${err.message}`, 'error');
   } finally {
     btn.textContent = prevText;
     btn.disabled = false;
@@ -735,10 +733,10 @@ async function deleteActiveDoc() {
       await loadGuests();
       filterTable();
     } else {
-      toast(`❌ Error: ${data.error || 'No se pudo eliminar'}`, 'error');
+      toast(`Error: ${data.error || 'No se pudo eliminar'}`, 'error');
     }
   } catch (err) {
-    toast(`❌ Error al eliminar: ${err.message}`, 'error');
+    toast(`Error al eliminar: ${err.message}`, 'error');
   }
 }
 
@@ -775,16 +773,16 @@ async function submitAddDocument(e) {
     });
     const data = await res.json();
     if (data.status === 'ok') {
-      toast(`✅ ${data.message}`, 'success');
+      toast(`${data.message}`, 'success');
       closeAddDocModal();
       await loadDocuments();
       await loadGuests();
       filterTable();
     } else {
-      toast(`❌ Error: ${data.error || 'No se pudo procesar el enlace'}`, 'error');
+      toast(`Error: ${data.error || 'No se pudo procesar el enlace'}`, 'error');
     }
   } catch (err) {
-    toast(`❌ Error de red: ${err.message}`, 'error');
+    toast(`Error de red: ${err.message}`, 'error');
   } finally {
     submitBtn.textContent = prevText;
     submitBtn.disabled = false;
@@ -798,15 +796,63 @@ async function loadPrinterStatus() {
     const data = await res.json();
     const dot = document.getElementById('printer-dot');
     const info = document.getElementById('printer-info');
+    const purgeBtn = document.getElementById('btn-purge-queue');
+    const queueCount = document.getElementById('queue-jobs-count');
 
-    if (data.installed) {
+    if (purgeBtn && queueCount) {
+      if (data.jobs_in_queue > 0) {
+        purgeBtn.style.display = 'inline-flex';
+        queueCount.textContent = data.jobs_in_queue;
+      } else {
+        purgeBtn.style.display = 'none';
+      }
+    }
+
+    if (data.online && data.is_ready) {
       dot.className = 'printer-dot ready';
-      info.innerHTML = `<strong>${data.name}</strong> conectada y lista (Rollo: ${data.label} - 38x90mm)`;
+      info.innerHTML = `<strong>${data.name}</strong> conectada y lista (Online • Rollo ${data.label} - 38x90mm)`;
+    } else if (data.installed) {
+      dot.className = 'printer-dot';
+      info.innerHTML = `<span style="color:var(--danger); font-weight:700;">${data.name} desconectada o apagada:</span> ${data.status_text} <span style="color:var(--muted); font-size:0.82rem;">(${data.details || 'Verifica el cable USB y encendido'})</span>`;
     } else {
       dot.className = 'printer-dot';
-      info.innerHTML = `<span style="color:var(--danger)">⚠️ ${data.name} no detectada</span> (${data.status_text})`;
+      info.innerHTML = `<span style="color:var(--danger); font-weight:700;">${data.name} no detectada</span> (${data.status_text})`;
     }
-  } catch { /* silencioso */ }
+  } catch (err) {
+    console.error('Error al comprobar impresora:', err);
+  }
+}
+
+async function manualCheckPrinterStatus() {
+  toast('Comprobando conexión física de la impresora…', 'warn');
+  await loadPrinterStatus();
+  try {
+    const res = await fetch('/api/printer/status');
+    const data = await res.json();
+    if (data.online && data.is_ready) {
+      toast(`Impresora ${data.name} conectada y lista (Online)`, 'success');
+    } else {
+      toast(`Impresora no disponible: ${data.status_text}`, 'error');
+    }
+  } catch (err) {
+    toast(`Error consultando impresora: ${err.message}`, 'error');
+  }
+}
+
+async function purgePrinterQueue() {
+  if (!confirm('¿Deseas cancelar y limpiar todos los trabajos pendientes de la cola de impresión de Windows?')) return;
+  try {
+    const res = await fetch('/api/printer/purge-jobs', { method: 'POST' });
+    const data = await res.json();
+    if (data.status === 'ok') {
+      toast('Cola de impresión limpiada exitosamente', 'success');
+      await loadPrinterStatus();
+    } else {
+      toast(`Error: ${data.error || 'No se pudo limpiar la cola'}`, 'error');
+    }
+  } catch (err) {
+    toast('Error al limpiar cola: ' + err.message, 'error');
+  }
 }
 
 async function loadGuests() {
@@ -843,7 +889,7 @@ function renderGuestsTable(guests) {
       <td style="color:var(--muted); font-size:0.83rem;">${g.position || '—'}</td>
       <td style="text-align:center;">
         <button class="face-btn ${g.face_enrolled ? 'active' : ''}" onclick="openFaceModal('${g.id}', '${(g.name || '').replace(/'/g, "\\'")}')" title="Administrar fotos faciales">
-          ${g.face_count > 0 ? `👤 ${g.face_count}/4 fotos` : '👤 + Enrolar'}
+          ${g.face_count > 0 ? `${g.face_count}/4 fotos` : '+ Enrolar'}
         </button>
       </td>
       <td>
@@ -856,13 +902,13 @@ function renderGuestsTable(guests) {
       <td style="text-align:center;">
         <div style="display:flex; gap:6px; justify-content:center;">
           <button class="btn-action print" onclick="manualPrintGuest('${g.id}')" title="Imprimir etiqueta en Brother QL-800">
-            🖨️ Imprimir
+            Imprimir
           </button>
           <button class="btn-action status-toggle" onclick="toggleGuestStatus('${g.id}')" title="Cambiar estado entre Registrado y Pendiente">
-            ${g.checked_in ? '↩ Desmarcar' : '✔ Registrar'}
+            ${g.checked_in ? 'Desmarcar' : 'Registrar'}
           </button>
           <button class="btn-action delete" onclick="deleteGuest('${g.id}', '${g.name}')" title="Eliminar invitado del CSV">
-            🗑️
+            Eliminar
           </button>
         </div>
       </td>`;
@@ -898,14 +944,14 @@ async function manualPrintGuest(id) {
     const prData = await prRes.json();
     const ok = ['ok', 'simulated'].includes(prData.print?.status);
     if (ok) {
-      toast(`✅ Ticket emitido y check-in confirmado para ${id}`, 'success');
+      toast(`Ticket emitido y check-in confirmado para ${id}`, 'success');
       await loadGuests();
       filterTable();
     } else {
-      toast(`❌ Error de impresión: ${prData.print?.message || prData.message || 'Fallo desconocido'}`, 'error');
+      toast(`Error de impresión: ${prData.print?.message || prData.message || 'Fallo desconocido'}`, 'error');
     }
   } catch (err) {
-    toast(`❌ Error de red al imprimir: ${err.message}`, 'error');
+    toast(`Error de red al imprimir: ${err.message}`, 'error');
   }
 }
 
@@ -970,32 +1016,24 @@ async function submitGuestForm(e) {
     });
     const data = await res.json();
     if (data.status === 'ok') {
-      toast(`✅ Invitado ${gid} guardado en CSV`, 'success');
+      toast(`Invitado ${gid} guardado en CSV`, 'success');
       closeAddGuestModal();
       await loadGuests();
       filterTable();
     } else {
-      toast(`❌ Error: ${data.error}`, 'error');
+      toast(`Error: ${data.error}`, 'error');
     }
   } catch (err) {
-    toast(`❌ Error de red: ${err.message}`, 'error');
+    toast(`Error de red: ${err.message}`, 'error');
   }
 }
 
-async function printSampleTest() {
-  if (!allGuests.length) {
-    toast('No hay invitados para probar', 'warn');
-    return;
-  }
-  const firstId = allGuests[0].id;
-  await manualPrintGuest(firstId);
-}
 
 
 async function confirmReset() {
   if (!confirm('¿Resetear TODOS los check-ins de los invitados?\nEsta acción devolverá a todos los invitados a estado Pendiente.')) return;
   await fetch('/api/reset', { method: 'POST' });
-  toast('♻️ Todos los check-ins han sido reseteados', 'warn');
+  toast('Todos los check-ins han sido reseteados', 'warn');
   await loadGuests();
   filterTable();
 }
@@ -1101,7 +1139,7 @@ function renderFaceGallery(faces) {
   const addSec = document.getElementById('face-add-section');
   if (total >= 4) {
     addSec.style.display = 'none';
-    showFaceStatus('✅ Capacidad completa (4/4 fotos registradas). Para agregar una nueva, elimina alguna foto previa.', 'success');
+    showFaceStatus('Capacidad completa (4/4 fotos registradas). Para agregar una nueva, elimina alguna foto previa.', 'success');
     stopFaceWebcam();
   } else {
     addSec.style.display = 'block';
@@ -1181,7 +1219,7 @@ async function captureFaceSnapshot() {
 
   const btn = document.getElementById('btn-snap-face');
   btn.disabled = true;
-  btn.textContent = '⏳ Analizando rostro con OpenCV…';
+  btn.textContent = 'Analizando rostro…';
   clearFaceStatus();
 
   try {
@@ -1192,16 +1230,16 @@ async function captureFaceSnapshot() {
     });
     const data = await res.json();
     if (data.success) {
-      showFaceStatus(`✅ ${data.message}`, 'success');
+      showFaceStatus(`${data.message}`, 'success');
       await loadGuestFaces(currentFaceGuestId);
     } else {
-      showFaceStatus(`❌ ${data.error || 'No se detectó rostro nítido'}`, 'error');
+      showFaceStatus(`${data.error || 'No se detectó rostro nítido'}`, 'error');
     }
   } catch (err) {
-    showFaceStatus(`❌ Error de comunicación: ${err.message}`, 'error');
+    showFaceStatus(`Error de comunicación: ${err.message}`, 'error');
   } finally {
     btn.disabled = false;
-    btn.textContent = '📸 Tomar Foto';
+    btn.textContent = 'Tomar Foto';
   }
 }
 
@@ -1226,13 +1264,13 @@ async function onFaceFilesSelected(files) {
       });
       const data = await res.json();
       if (data.success) {
-        showFaceStatus(`✅ ${file.name}: Registrado exitosamente`, 'success');
+        showFaceStatus(`${file.name}: Registrado exitosamente`, 'success');
         await loadGuestFaces(currentFaceGuestId);
       } else {
-        showFaceStatus(`❌ ${file.name}: ${data.error || 'No se detectó rostro'}`, 'error');
+        showFaceStatus(`${file.name}: ${data.error || 'No se detectó rostro'}`, 'error');
       }
     } catch (err) {
-      showFaceStatus(`❌ Error con ${file.name}: ${err.message}`, 'error');
+      showFaceStatus(`Error con ${file.name}: ${err.message}`, 'error');
     }
   }
   document.getElementById('face-file-input').value = '';
@@ -1262,8 +1300,14 @@ loadDocuments();
 loadPrinterStatus();
 loadGuests();
 
-// Sincronización en vivo cada 3.5 segundos para reflejar escaneos del kiosko en tiempo real
+let pollTicks = 0;
+// Sincronización en vivo cada 3.5 segundos para reflejar escaneos del kiosko y estado en tiempo real
 setInterval(async () => {
+  pollTicks++;
+  if (pollTicks % 2 === 0) {
+    loadPrinterStatus();
+  }
+
   const guestModalOpen = document.getElementById('guest-modal').classList.contains('open');
   const faceModalOpen  = document.getElementById('face-modal').classList.contains('open');
   if (!guestModalOpen && !faceModalOpen) {

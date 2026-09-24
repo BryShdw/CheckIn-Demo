@@ -6,129 +6,117 @@
   <title>Kiosko de Registro y Acreditación — DACER</title>
   <link rel="stylesheet" href="/static/style.css">
   <style>
-    html, body { height: 100%; overflow: hidden; margin: 0; padding: 0; }
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
 
-    /* ── Pantalla de Bienvenida (Welcome Landing) ── */
+    /* ── Pantalla de Bienvenida (Flat & Clean Light) ── */
     .welcome-container {
       position: fixed;
       inset: 0;
-      background: radial-gradient(circle at 50% 35%, #241419 0%, #0c0f17 85%);
+      background: #f8fafc;
       display: flex;
       align-items: center;
       justify-content: center;
       padding: 24px;
       z-index: 100;
-      animation: fadeIn 0.4s ease-out;
     }
 
     .welcome-card {
-      background: rgba(19, 24, 36, 0.90);
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.8), 0 0 50px rgba(204, 35, 43, 0.2);
-      backdrop-filter: blur(16px);
-      border-radius: 28px;
-      padding: 56px 44px;
-      max-width: 600px;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 48px 40px;
+      max-width: 520px;
       width: 100%;
       text-align: center;
       display: flex;
       flex-direction: column;
       align-items: center;
-      animation: welcomePop 0.5s cubic-bezier(0.34, 1.4, 0.64, 1);
-    }
-
-    @keyframes welcomePop {
-      0% { transform: scale(0.92); opacity: 0; }
-      100% { transform: scale(1); opacity: 1; }
+      box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
     }
 
     .welcome-logo {
-      height: 48px;
-      max-width: 240px;
+      height: 44px;
+      max-width: 220px;
       object-fit: contain;
-      margin-bottom: 24px;
-      filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.4));
+      margin-bottom: 22px;
     }
 
     .welcome-badge {
       display: inline-flex;
       align-items: center;
-      gap: 8px;
-      background: rgba(204, 35, 43, 0.15);
-      border: 1px solid rgba(204, 35, 43, 0.45);
-      color: #ff4d58;
-      padding: 6px 18px;
-      border-radius: 24px;
-      font-size: 0.82rem;
+      gap: 7px;
+      background: var(--accent-light);
+      border: 1px solid var(--accent-border);
+      color: var(--accent);
+      padding: 5px 14px;
+      border-radius: 20px;
+      font-size: 0.78rem;
       font-weight: 700;
-      letter-spacing: 0.08em;
+      letter-spacing: 0.05em;
       text-transform: uppercase;
-      margin-bottom: 22px;
+      margin-bottom: 20px;
     }
 
     .welcome-title {
-      font-size: 2.7rem;
+      font-size: 2.2rem;
       font-weight: 800;
-      color: #ffffff;
-      margin: 0 0 14px 0;
+      color: var(--text);
+      margin: 0 0 12px 0;
       letter-spacing: -0.02em;
-      line-height: 1.15;
+      line-height: 1.2;
     }
 
     .welcome-subtitle {
-      font-size: 1.12rem;
-      color: var(--muted);
+      font-size: 1.05rem;
+      color: var(--silver);
       line-height: 1.55;
-      margin: 0 0 36px 0;
-      max-width: 480px;
+      margin: 0 0 32px 0;
+      max-width: 440px;
     }
 
     .btn-welcome-cta {
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 14px;
+      gap: 10px;
       width: 100%;
-      max-width: 490px;
-      padding: 22px 28px;
+      max-width: 440px;
+      padding: 16px 24px;
       border: none;
-      border-radius: 20px;
-      background: linear-gradient(135deg, #e02832 0%, #cc232b 55%, #991b1b 100%);
+      border-radius: 10px;
+      background: var(--accent);
       color: #ffffff;
-      font-size: 1.25rem;
+      font-size: 1.1rem;
       font-weight: 700;
       cursor: pointer;
-      box-shadow: 0 10px 30px rgba(204, 35, 43, 0.45), 0 0 20px rgba(204, 35, 43, 0.3);
-      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-      position: relative;
-      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(220, 38, 38, 0.2);
+      transition: background 0.15s ease, transform 0.15s ease;
       user-select: none;
-      animation: pulseBtn 2.6s infinite;
       font-family: inherit;
     }
 
     .btn-welcome-cta:hover {
-      transform: translateY(-2px) scale(1.02);
-      box-shadow: 0 16px 42px rgba(204, 35, 43, 0.6), 0 0 30px rgba(204, 35, 43, 0.4);
+      background: var(--accent-hover);
+      transform: translateY(-1px);
     }
 
     .btn-welcome-cta:active {
-      transform: translateY(1px) scale(0.98);
-    }
-
-    @keyframes pulseBtn {
-      0%, 100% {
-        box-shadow: 0 10px 30px rgba(204, 35, 43, 0.45), 0 0 20px rgba(204, 35, 43, 0.3);
-      }
-      50% {
-        box-shadow: 0 14px 40px rgba(204, 35, 43, 0.65), 0 0 32px rgba(204, 35, 43, 0.5);
-      }
+      transform: translateY(0);
     }
 
     .welcome-footer-hint {
-      margin-top: 24px;
+      margin-top: 22px;
       font-size: 0.85rem;
       color: var(--muted);
+      font-weight: 500;
     }
 
     /* ── Vista del Kiosko de Acreditación ── */
@@ -136,12 +124,32 @@
       display: none;
       height: 100vh;
       flex-direction: column;
+      background: var(--bg);
+    }
+
+    .btn-flat-back {
+      font-size: 0.85rem;
+      padding: 7px 14px;
+      background: #ffffff;
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      color: var(--silver);
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.15s, color 0.15s;
+    }
+    .btn-flat-back:hover {
+      background: var(--surface2);
+      color: var(--text);
     }
 
     .kiosk-layout {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      height: calc(100vh - 64px);
+      height: calc(100vh - 57px);
       gap: 0;
     }
 
@@ -153,10 +161,10 @@
     /* Lado izquierdo: cámara */
     .kiosk-camera {
       position: relative;
-      background: #000;
+      background: #0f172a;
       display: flex;
       flex-direction: column;
-      border-right: 2px solid var(--border);
+      border-right: 1px solid var(--border);
     }
 
     #video {
@@ -175,22 +183,25 @@
 
     .camera-instruction {
       position: absolute;
-      bottom: 0; left: 0; right: 0;
-      padding: 18px 20px;
-      background: linear-gradient(transparent, rgba(10, 14, 23, 0.92));
-      text-align: center;
+      bottom: 18px; left: 0; right: 0;
       display: flex;
-      flex-direction: column;
-      gap: 6px;
-      align-items: center;
+      justify-content: center;
+      pointer-events: none;
     }
 
-    .camera-instruction p {
-      font-size: 1.1rem;
-      color: rgba(255,255,255,0.95);
+    .instruction-pill {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(8px);
+      border: 1px solid var(--border);
+      border-radius: 30px;
+      padding: 9px 18px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.9rem;
       font-weight: 600;
-      margin: 0;
-      text-shadow: 0 2px 4px rgba(0,0,0,0.6);
+      color: var(--text);
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.1);
     }
 
     /* Cuadro de guía centrado */
@@ -208,15 +219,15 @@
     .scan-guide-inner::after {
       content: '';
       position: absolute;
-      width: 32px; height: 32px;
-      border-color: rgba(204, 35, 43, 0.85);
+      width: 28px; height: 28px;
+      border-color: var(--accent);
       border-style: solid;
     }
 
-    .scan-guide::before  { top: 0;  left: 0;  border-width: 4px 0 0 4px; border-radius: 4px 0 0 0; }
-    .scan-guide::after   { top: 0;  right: 0; border-width: 4px 4px 0 0; border-radius: 0 4px 0 0; }
-    .scan-guide-inner::before { bottom: 0; left: 0;  border-width: 0 0 4px 4px; border-radius: 0 0 0 4px; }
-    .scan-guide-inner::after  { bottom: 0; right: 0; border-width: 0 4px 4px 0; border-radius: 0 0 4px 0; }
+    .scan-guide::before  { top: 0; left: 0; border-width: 3px 0 0 3px; border-radius: 4px 0 0 0; }
+    .scan-guide::after   { top: 0; right: 0; border-width: 3px 3px 0 0; border-radius: 0 4px 0 0; }
+    .scan-guide-inner::before { bottom: 0; left: 0; border-width: 0 0 3px 3px; border-radius: 0 0 0 4px; }
+    .scan-guide-inner::after  { bottom: 0; right: 0; border-width: 0 3px 3px 0; border-radius: 0 0 4px 0; }
 
     .scan-guide.detected::before,
     .scan-guide.detected::after,
@@ -232,100 +243,143 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 30px 24px;
-      gap: 0;
-      transition: background 0.4s;
+      padding: 36px 30px;
+      background: #ffffff;
+      transition: background 0.2s;
       overflow-y: auto;
     }
 
-    .kiosk-panel.state-idle       { background: var(--surface); }
-    .kiosk-panel.state-new        { background: linear-gradient(160deg, #0d2218 0%, var(--surface) 60%); }
-    .kiosk-panel.state-duplicate  { background: linear-gradient(160deg, #2b1d06 0%, var(--surface) 60%); }
-    .kiosk-panel.state-error      { background: linear-gradient(160deg, #2e0e12 0%, var(--surface) 60%); }
+    .kiosk-panel.state-idle       { background: #ffffff; }
+    .kiosk-panel.state-new        { background: #f8fafc; }
+    .kiosk-panel.state-duplicate  { background: #f8fafc; }
+    .kiosk-panel.state-error      { background: #f8fafc; }
 
     /* Estado idle */
     .idle-state {
       text-align: center;
-      animation: breathe 3s ease-in-out infinite;
       max-width: 440px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
 
-    @keyframes breathe {
-      0%, 100% { opacity: 0.82; transform: scale(1); }
-      50%       { opacity: 1;    transform: scale(1.02); }
+    .idle-icon-wrap {
+      width: 76px;
+      height: 76px;
+      border-radius: 16px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+      color: var(--accent);
     }
 
-    .idle-icon { font-size: 4.5rem; margin-bottom: 16px; display: block; }
-    .idle-title { font-size: 1.8rem; font-weight: 700; margin-bottom: 10px; }
-    .idle-sub   { font-size: 0.95rem; color: var(--muted); line-height: 1.5; margin-bottom: 24px; }
+    .idle-title {
+      font-size: 1.65rem;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 10px;
+      letter-spacing: -0.01em;
+    }
+
+    .idle-sub {
+      font-size: 0.95rem;
+      color: var(--silver);
+      line-height: 1.55;
+      margin-bottom: 22px;
+    }
+
+    .idle-pill-hint {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 5px 14px;
+      font-size: 0.8rem;
+      color: var(--muted);
+      font-weight: 600;
+    }
 
     /* Tarjeta del invitado */
     .guest-result {
       width: 100%;
-      max-width: 520px;
+      max-width: 480px;
       display: none;
       flex-direction: column;
       align-items: center;
-      animation: pop-in 0.35s cubic-bezier(0.34,1.56,0.64,1);
+      animation: pop-in 0.25s ease-out;
     }
     .guest-result.visible { display: flex; }
 
     @keyframes pop-in {
-      from { transform: scale(0.88); opacity: 0; }
-      to   { transform: scale(1);    opacity: 1; }
+      from { transform: scale(0.96); opacity: 0; }
+      to   { transform: scale(1); opacity: 1; }
     }
 
     .status-banner {
       width: 100%;
-      border-radius: 16px 16px 0 0;
-      padding: 18px 24px;
+      border-radius: 10px 10px 0 0;
+      padding: 16px 20px;
       display: flex;
       align-items: center;
-      gap: 14px;
-      font-size: 1.05rem;
+      gap: 12px;
+      font-size: 1rem;
       font-weight: 700;
     }
 
-    .status-banner.new       { background: rgba(16,185,129,0.18);  border: 2px solid var(--success); border-bottom: none; color: var(--success); }
-    .status-banner.duplicate { background: rgba(245,158,11,0.18);  border: 2px solid var(--warn);    border-bottom: none; color: var(--warn); }
-    .status-banner.error     { background: rgba(239,68,68,0.18);   border: 2px solid var(--danger);  border-bottom: none; color: var(--danger); }
+    .status-banner.new       { background: #f0fdf4; border: 1px solid #bbf7d0; border-bottom: none; color: #166534; }
+    .status-banner.duplicate { background: #fffbeb; border: 1px solid #fde68a; border-bottom: none; color: #92400e; }
+    .status-banner.error     { background: #fef2f2; border: 1px solid #fecaca; border-bottom: none; color: #991b1b; }
+    .status-banner.pending   { background: #eff6ff; border: 1px solid #bfdbfe; border-bottom: none; color: #1e40af; }
 
-    .status-banner .banner-icon { font-size: 2rem; flex-shrink: 0; }
+    .status-banner .banner-icon { display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
     .status-banner .banner-text { line-height: 1.3; }
-    .status-banner .banner-sub  { font-size: 0.82rem; font-weight: 400; opacity: 0.85; margin-top: 3px; }
+    .status-banner .banner-sub  { font-size: 0.82rem; font-weight: 500; opacity: 0.9; margin-top: 2px; }
 
     .guest-body-card {
       width: 100%;
-      background: var(--surface2);
-      border-radius: 0 0 16px 16px;
-      border: 2px solid var(--border);
+      background: #ffffff;
+      border-radius: 0 0 10px 10px;
+      border: 1px solid var(--border);
       border-top: none;
       padding: 24px;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);
     }
 
-    .status-banner.new       + .guest-body-card { border-color: var(--success); }
-    .status-banner.duplicate + .guest-body-card { border-color: var(--warn); }
-    .status-banner.error     + .guest-body-card { border-color: var(--danger); }
+    .status-banner.new       + .guest-body-card { border-color: #bbf7d0; }
+    .status-banner.duplicate + .guest-body-card { border-color: #fde68a; }
+    .status-banner.error     + .guest-body-card { border-color: #fecaca; }
+    .status-banner.pending   + .guest-body-card { border-color: #bfdbfe; }
 
     .g-name-large {
-      font-size: 1.8rem;
+      font-size: 1.65rem;
       font-weight: 800;
-      line-height: 1.2;
+      line-height: 1.25;
       color: var(--text);
-      margin-bottom: 4px;
+      margin-bottom: 6px;
     }
 
-    .g-code-large {
-      font-size: 0.88rem;
+    .g-code-badge {
+      display: inline-block;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 3px 8px;
+      font-size: 0.85rem;
       font-family: monospace;
-      color: #ff4d58;
+      font-weight: 600;
+      color: var(--silver);
       margin-bottom: 18px;
     }
 
     .g-details {
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 12px;
       border-top: 1px solid var(--border);
       padding-top: 16px;
     }
@@ -333,12 +387,22 @@
     .g-detail-row {
       display: flex;
       justify-content: space-between;
-      align-items: center;
+      align-items: baseline;
       font-size: 0.95rem;
     }
 
-    .g-detail-row .d-label { color: var(--muted); font-size: 0.82rem; text-transform: uppercase; font-weight: 600; }
-    .g-detail-row .d-value { font-weight: 600; color: var(--text); }
+    .g-detail-row .d-label {
+      color: var(--muted);
+      font-size: 0.76rem;
+      text-transform: uppercase;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+    .g-detail-row .d-value {
+      font-weight: 600;
+      color: var(--text);
+      text-align: right;
+    }
 
     /* Barra de auto-reset */
     .reset-bar-wrap {
@@ -363,31 +427,33 @@
       font-size: 0.8rem;
       color: var(--muted);
       text-align: center;
+      font-weight: 500;
     }
 
     .btn-print-kiosk {
       width: 100%;
       margin-top: 16px;
-      padding: 16px;
+      padding: 13px 20px;
       border: none;
-      border-radius: 12px;
-      font-size: 1.05rem;
+      border-radius: 8px;
+      font-size: 0.98rem;
       font-weight: 700;
       cursor: pointer;
-      background: linear-gradient(135deg, #e02832 0%, #cc232b 55%, #991b1b 100%);
+      background: var(--accent);
       color: #fff;
       display: none;
       align-items: center;
       justify-content: center;
       gap: 8px;
-      transition: all .2s;
-      box-shadow: 0 4px 16px var(--accent-glow);
+      transition: background 0.15s ease;
       font-family: inherit;
     }
     .btn-print-kiosk:hover:not(:disabled) {
-      opacity: 0.95;
-      transform: translateY(-1px);
-      box-shadow: 0 6px 20px var(--accent-glow);
+      background: var(--accent-hover);
+    }
+    .btn-print-kiosk:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
     }
     .btn-print-kiosk.show { display: flex; }
 
@@ -397,25 +463,27 @@
 <body>
 
 <!-- ═══════════════════════════════════════════════════════════════════════════ -->
-<!-- VISTA 1: Pantalla de Bienvenida (Landing Kiosko)                           -->
+<!-- VISTA 1: Pantalla de Bienvenida (Flat & Clean Light)                        -->
 <!-- ═══════════════════════════════════════════════════════════════════════════ -->
 <div id="welcome-view" class="welcome-container">
   <div class="welcome-card">
-    <img src="/static/logo.png" alt="DACER" class="welcome-logo">
-    <div class="welcome-badge">🎟️ REGISTRO & CHECK-IN</div>
-    <h1 class="welcome-title">¡Bienvenido(a)!</h1>
+    <img src="/static/logo-dark.png" alt="DACER" class="welcome-logo">
+    <div class="welcome-badge">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+      <span>Acreditación y Registro</span>
+    </div>
+    <h1 class="welcome-title">Control de Asistencia</h1>
     <p class="welcome-subtitle">
-      Confirma tu asistencia e imprime tu credencial de acceso oficial de forma rápida y sencilla.
+      Confirme su asistencia y obtenga su credencial oficial de acceso de forma rápida e instantánea.
     </p>
 
     <button id="btn-start-checkin" class="btn-welcome-cta" onclick="startCheckinSession()">
-      <span style="font-size: 1.5rem;">🎟️</span>
-      <span>Presione aquí para confirmar asistencia</span>
-      <span style="font-size: 1.3rem;">➜</span>
+      <span>Iniciar Acreditación</span>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
     </button>
 
     <div class="welcome-footer-hint">
-      Toca el botón para activar la cámara e iniciar la acreditación
+      Ubíquese frente a la cámara o presente su código QR
     </div>
   </div>
 </div>
@@ -427,14 +495,15 @@
 <div id="kiosk-view">
 
   <!-- Header Limpio: Logo DACER y botón para volver al inicio -->
-  <header style="justify-content:space-between; padding:12px 24px; border-bottom:1px solid var(--border);">
+  <header style="justify-content:space-between; padding:12px 24px; background:#ffffff; border-bottom:1px solid var(--border);">
     <div class="logo" style="display:flex; align-items:center; gap:12px;">
-      <img src="/static/logo.png" alt="DACER" style="height:32px; object-fit:contain;">
-      <span style="font-weight:700; font-size:1.05rem; letter-spacing:-0.01em;">Acreditación & Registro</span>
+      <img src="/static/logo-dark.png" alt="DACER" style="height:32px; object-fit:contain;">
+      <span style="font-weight:700; font-size:1.05rem; letter-spacing:-0.01em; color:var(--text);">Acreditación & Registro</span>
     </div>
     <div class="header-actions">
-      <button class="btn" onclick="returnToWelcome()" style="font-size:0.85rem; padding:7px 16px; background:rgba(255,255,255,0.06); border-color:var(--border); color:var(--text); cursor:pointer;">
-        ⬅ Volver al Inicio
+      <button class="btn-flat-back" onclick="returnToWelcome()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        <span>Volver al Inicio</span>
       </button>
     </div>
   </header>
@@ -442,7 +511,7 @@
   <!-- Contenido principal -->
   <div class="kiosk-layout">
 
-    <!-- LADO IZQUIERDO: Cámara sola -->
+    <!-- LADO IZQUIERDO: Cámara -->
     <div class="kiosk-camera">
       <video id="video" autoplay muted playsinline></video>
       <canvas id="overlay-canvas"></canvas>
@@ -453,9 +522,12 @@
         <div class="scan-guide-inner"></div>
       </div>
 
-      <!-- Instrucción inferior limpia -->
+      <!-- Instrucción inferior limpia en tarjeta flotante -->
       <div class="camera-instruction">
-        <p id="cam-instruction">📷 Ubícate frente a la cámara o acerca tu código QR</p>
+        <div class="instruction-pill">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          <span id="cam-instruction">Ubíquese frente a la cámara o presente su código QR</span>
+        </div>
       </div>
     </div>
 
@@ -464,15 +536,20 @@
 
       <!-- Estado inicial: esperando escaneo -->
       <div class="idle-state" id="idle-state">
-        <span class="idle-icon">👤🎟️</span>
+        <div class="idle-icon-wrap">
+          <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="2.5"/><line x1="15" y1="8" x2="17" y2="8"/><line x1="15" y1="12" x2="17" y2="12"/><path d="M6 16c0-1.5 1.5-2.5 3-2.5s3 1 3 2.5"/></svg>
+        </div>
         <div class="idle-title">Acreditación y Check-in</div>
-        <div class="idle-sub">Muestra tu <strong>código QR</strong> o <strong>mira a la cámara</strong>.<br>Tu etiqueta se imprimirá en la <strong>Brother QL-800</strong>.</div>
+        <div class="idle-sub">Presente su <strong>código QR</strong> ante la cámara o <strong>mire de frente</strong> para reconocimiento facial.<br>Su credencial se imprimirá en la <strong>Brother QL-800</strong>.</div>
+        <div class="idle-pill-hint">
+          <span>Sistema preparado para escaneo continuo</span>
+        </div>
       </div>
 
       <!-- Resultado del escaneo -->
       <div class="guest-result" id="guest-result">
 
-        <!-- Banner de estado -->
+        <!-- Banner de estado plano -->
         <div class="status-banner" id="status-banner">
           <span class="banner-icon" id="banner-icon"></span>
           <div class="banner-text">
@@ -484,7 +561,7 @@
         <!-- Datos del invitado -->
         <div class="guest-body-card">
           <div class="g-name-large" id="g-name">—</div>
-          <div class="g-code-large" id="g-code">—</div>
+          <div class="g-code-badge"><span id="g-code">—</span></div>
           <div class="g-details">
             <div class="g-detail-row">
               <span class="d-label">Empresa</span>
@@ -496,16 +573,17 @@
             </div>
           </div>
 
-          <!-- Botón manual (aparece si el modo es manual) -->
+          <!-- Botón manual plano -->
           <button class="btn-print-kiosk" id="btn-print-kiosk" onclick="printCurrent()">
-            🖨️ Imprimir Etiqueta
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+            <span id="btn-print-text">Imprimir Credencial</span>
           </button>
 
           <!-- Barra de auto-reset -->
           <div class="reset-bar-wrap">
             <div class="reset-bar" id="reset-bar"></div>
           </div>
-          <div class="reset-hint" id="reset-hint">Pantalla nueva en 6 s…</div>
+          <div class="reset-hint" id="reset-hint">Próximo escaneo en 6 s…</div>
         </div>
       </div>
 
@@ -536,12 +614,20 @@ const FACE_INTERVAL     = 650;      // ms entre llamadas de inferencia facial
 
 let isFaceProcessing    = false;
 let lastFaceCheckTs     = 0;
+let unmatchedFaceFrames = 0;
 
 const video             = document.getElementById('video');
 const processCanvas     = document.getElementById('process-canvas');
 const overlayCanvas     = document.getElementById('overlay-canvas');
 const pCtx              = processCanvas.getContext('2d', { willReadFrequently: true });
 const oCtx              = overlayCanvas.getContext('2d');
+
+/* ── Iconos SVG Planos para Estados ── */
+const SVG_CHECK = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+const SVG_WARN  = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`;
+const SVG_BAN   = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>`;
+const SVG_INFO  = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`;
+const SVG_PRINT = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>`;
 
 /* ── Sincronización de configuración desde /api/kiosk-settings ── */
 async function syncKioskSettings() {
@@ -563,11 +649,11 @@ function updateInstructionUI() {
   const hint = document.getElementById('cam-instruction');
   if (!hint) return;
   if (scanMethod === 'both') {
-    hint.textContent = '📷 Ubícate frente a la cámara o acerca tu código QR';
+    hint.textContent = 'Ubíquese frente a la cámara o presente su código QR';
   } else if (scanMethod === 'facial') {
-    hint.textContent = '👤 Ubica tu rostro frente a la cámara';
+    hint.textContent = 'Ubique su rostro frente a la cámara';
   } else {
-    hint.textContent = '🎟️ Acerca tu código QR hacia la cámara';
+    hint.textContent = 'Acerque su código QR hacia la cámara';
   }
 }
 
@@ -625,7 +711,7 @@ async function initCamera() {
       overlayCanvas.height = video.videoHeight;
     };
   } catch (err) {
-    document.getElementById('cam-instruction').textContent = '⚠️ Cámara no disponible. Verifica los permisos del navegador.';
+    document.getElementById('cam-instruction').textContent = 'Cámara no disponible. Verifique los permisos del navegador.';
   }
 }
 
@@ -655,7 +741,7 @@ function scanLoop() {
         qrFound = true;
         drawQRBox(code.location);
         document.getElementById('scan-guide').classList.add('detected');
-        document.getElementById('cam-instruction').textContent = '✅ QR detectado';
+        document.getElementById('cam-instruction').textContent = 'Código QR detectado';
         onQRDetected(code.data);
       }
     }
@@ -700,38 +786,53 @@ async function checkFaceMatch() {
     }
 
     if (data.status === 'ok') {
-      // Modo automático: Ticket IMPRESO con éxito
+      unmatchedFaceFrames = 0;
       document.getElementById('scan-guide').classList.add('detected');
       lastScannedCode = data.guest.id;
       lastScanTs = Date.now();
       showGuestPanel(data.guest, 'new');
-      toast(`✅ ¡Rostro reconocido! Ticket impreso para ${data.guest.name}`, 'success');
-      // REGLA: Al haberse impreso el ticket, recién aquí regresa a la bienvenida al terminar la barra
+      toast(`Rostro reconocido: ${data.guest.name}. Credencial emitida.`, 'success');
       scheduleReset(true);
     } else if (data.status === 'already_registered') {
-      // No se imprimió ticket (ya estaba registrado). Permanece en el kiosko (resetea solo a idle)
+      unmatchedFaceFrames = 0;
       document.getElementById('scan-guide').classList.add('detected');
       lastScannedCode = data.guest.id;
       lastScanTs = Date.now();
       showGuestPanel(data.guest, 'duplicate');
-      toast(`⚠️ ${data.guest.name} ya cuenta con asistencia previa`, 'warn');
+      toast(`${data.guest.name} ya cuenta con asistencia previa`, 'warn');
       scheduleReset(false);
     } else if (data.status === 'identified') {
-      // Modo manual: Identificado pero aún NO impreso. NO se programa ningún retorno ni reset
+      unmatchedFaceFrames = 0;
       document.getElementById('scan-guide').classList.add('detected');
       lastScannedCode = data.guest.id;
       lastScanTs = Date.now();
       showGuestPanel(data.guest, data.guest.checked_in ? 'duplicate' : 'pending');
       const btn = document.getElementById('btn-print-kiosk');
-      btn.textContent = data.guest.checked_in ? '🖨️ Reimprimir Ticket' : '🖨️ Imprimir Ticket y Confirmar Asistencia';
+      const txt = document.getElementById('btn-print-text');
+      if (txt) txt.textContent = data.guest.checked_in ? 'Reimprimir Credencial' : 'Imprimir Credencial y Confirmar';
       btn.classList.add('show');
       btn.disabled = false;
-      // Sin timer: permanece esperando la acción de imprimir o volver al inicio
+    } else if (data.status === 'not_registered') {
+      unmatchedFaceFrames = 0;
+      document.getElementById('scan-guide').classList.add('detected');
+      lastScannedCode = data.guest_id || 'UNKNOWN';
+      lastScanTs = Date.now();
+      showNotRegistered(data.guest_id, data.message || 'El perfil no coincide con ningún participante de la lista activa.');
     } else if (data.status === 'print_failed') {
-      // Fallo de impresión: no se imprimió. Permanece en el kiosko
+      unmatchedFaceFrames = 0;
       showGuestPanel(data.guest, 'error-print');
-      toast(`❌ Error al imprimir: ${data.message}`, 'error');
+      toast(`Error de impresión: ${data.message}`, 'error');
       scheduleReset(false);
+    } else if (data.status === 'no_match' && data.bbox) {
+      unmatchedFaceFrames++;
+      if (unmatchedFaceFrames >= 2) {
+        unmatchedFaceFrames = 0;
+        lastScannedCode = 'FACE_UNMATCHED';
+        lastScanTs = Date.now();
+        showNotRegistered('Rostro no registrado', 'No se encontró coincidencia con ningún participante registrado. Por favor presente su código QR o acuda al módulo de registro.');
+      }
+    } else if (!data.bbox) {
+      unmatchedFaceFrames = 0;
     }
   } catch (err) {
     // Silencioso para evitar saturación en inferencias periódicas
@@ -745,18 +846,22 @@ function drawFaceBox(box, label, similarity) {
   oCtx.save();
   oCtx.beginPath();
   oCtx.rect(x, y, w, h);
-  oCtx.lineWidth = 3;
-  oCtx.strokeStyle = label ? '#10b981' : '#cc232b';
+  oCtx.lineWidth = 2.5;
+  oCtx.strokeStyle = label ? '#16a34a' : '#dc2626';
   oCtx.stroke();
 
-  oCtx.fillStyle = label ? 'rgba(16,185,129,0.14)' : 'rgba(204,35,43,0.12)';
+  oCtx.fillStyle = label ? 'rgba(22, 163, 74, 0.12)' : 'rgba(220, 38, 38, 0.10)';
   oCtx.fill();
 
   if (label) {
-    oCtx.fillStyle = '#10b981';
-    oCtx.font = 'bold 16px "Plus Jakarta Sans", sans-serif';
+    oCtx.fillStyle = '#16a34a';
+    oCtx.font = '600 14px "Plus Jakarta Sans", sans-serif';
     const simText = similarity ? ` (${Math.round(similarity * 100)}%)` : '';
-    oCtx.fillText(`👤 ${label}${simText}`, x, Math.max(22, y - 8));
+    oCtx.fillText(`${label}${simText}`, x, Math.max(20, y - 8));
+  } else {
+    oCtx.fillStyle = '#dc2626';
+    oCtx.font = '600 13px "Plus Jakarta Sans", sans-serif';
+    oCtx.fillText('No registrado', x, Math.max(20, y - 8));
   }
   oCtx.restore();
 }
@@ -768,16 +873,17 @@ function drawQRBox(loc) {
   oCtx.lineTo(loc.bottomRightCorner.x, loc.bottomRightCorner.y);
   oCtx.lineTo(loc.bottomLeftCorner.x,  loc.bottomLeftCorner.y);
   oCtx.closePath();
-  oCtx.lineWidth   = 4;
-  oCtx.strokeStyle = '#10b981';
+  oCtx.lineWidth   = 3;
+  oCtx.strokeStyle = '#16a34a';
   oCtx.stroke();
-  oCtx.fillStyle   = 'rgba(16,185,129,0.14)';
+  oCtx.fillStyle   = 'rgba(22, 163, 74, 0.12)';
   oCtx.fill();
 }
 
 /* ── Detección y Procesamiento de QR ── */
 async function onQRDetected(rawCode) {
-  const code = rawCode.trim().toUpperCase();
+  const code = (rawCode || '').trim();
+  if (!code) return;
   const now  = Date.now();
 
   if (code === lastScannedCode && (now - lastScanTs) < SCAN_COOLDOWN) return;
@@ -785,27 +891,27 @@ async function onQRDetected(rawCode) {
   lastScanTs      = now;
 
   try {
-    const res   = await fetch(`/api/guest/${encodeURIComponent(code)}`);
-    const guest = await res.json();
+    const res  = await fetch(`/api/guest/${encodeURIComponent(code)}`);
+    const data = await res.json();
 
-    if (!res.ok) {
-      showError(code);
+    if (!res.ok || data.status === 'not_registered' || !data.id) {
+      showNotRegistered(code, data.message || 'El código QR no coincide con ningún invitado registrado en el evento.');
       return;
     }
 
+    const guest = data;
     if (currentMode === 'auto') {
       await doCheckinAndPrint(guest);
     } else {
-      // Modo manual: Muestra la información y botón para imprimir. NO retorna hasta imprimir
       showGuestPanel(guest, guest.checked_in ? 'duplicate' : 'pending');
       const btn = document.getElementById('btn-print-kiosk');
-      btn.textContent = guest.checked_in ? '🖨️ Reimprimir Ticket (Copia)' : '🖨️ Imprimir Ticket y Confirmar Asistencia';
+      const txt = document.getElementById('btn-print-text');
+      if (txt) txt.textContent = guest.checked_in ? 'Reimprimir Credencial' : 'Imprimir Credencial y Confirmar';
       btn.classList.add('show');
       btn.disabled = false;
-      // No programar reset: espera a que el usuario presione Imprimir o Volver al Inicio
     }
   } catch (err) {
-    toast('Error: ' + err.message, 'error');
+    showNotRegistered(code, 'Error al consultar código: ' + err.message);
   }
 }
 
@@ -816,13 +922,13 @@ async function doCheckinAndPrint(guest) {
 
   if (wasRegistered) {
     showGuestPanel(guest, 'duplicate');
-    toast(`⚠️ ${guest.name || guestId} ya cuenta con asistencia registrada previamente`, 'warn');
-    scheduleReset(false); // No se imprimió ticket nuevo -> resetea a idle en kiosko, no vuelve a bienvenida
+    toast(`Asistencia previa registrada para ${guest.name || guestId}`, 'warn');
+    scheduleReset(false);
     return;
   }
 
   showGuestPanel(guest, 'printing');
-  toast(`🖨️ Imprimiendo ficha de asistencia para ${guest.name || guestId}…`, 'warn');
+  toast(`Generando credencial para ${guest.name || guestId}…`, 'warn');
 
   try {
     const prRes  = await fetch(`/api/print/${encodeURIComponent(guestId)}`, { method: 'POST' });
@@ -830,20 +936,19 @@ async function doCheckinAndPrint(guest) {
 
     if (prRes.ok && (prData.print?.status === 'ok' || prData.print?.status === 'simulated')) {
       showGuestPanel(prData.guest || guest, 'new');
-      toast(`✅ Ticket impreso y asistencia registrada para ${guest.name || guestId}`, 'success');
-      // REGLA: Ticket impreso con éxito -> regresa a pantalla de bienvenida
+      toast(`Credencial emitida y asistencia confirmada para ${guest.name || guestId}`, 'success');
       scheduleReset(true);
     } else if (prData.status === 'already_registered') {
       showGuestPanel(prData.guest || guest, 'duplicate');
       scheduleReset(false);
     } else {
       showGuestPanel(guest, 'error-print');
-      toast(`❌ Error de impresión: ${prData.message || prData.print?.message || 'Fallo de impresora'}`, 'error');
+      toast(`Error de impresión: ${prData.message || prData.print?.message || 'Fallo de impresora'}`, 'error');
       scheduleReset(false);
     }
   } catch (err) {
     showGuestPanel(guest, 'error-print');
-    toast('❌ Error de comunicación: ' + err.message, 'error');
+    toast('Error de comunicación: ' + err.message, 'error');
     scheduleReset(false);
   }
 }
@@ -853,27 +958,27 @@ async function printCurrent() {
   if (!currentGuest) return;
   const guestId = currentGuest.id || currentGuest.code;
   const btn = document.getElementById('btn-print-kiosk');
+  const txt = document.getElementById('btn-print-text');
   btn.disabled = true;
-  btn.textContent = '⏳ Imprimiendo credencial…';
+  if (txt) txt.textContent = 'Imprimiendo credencial…';
 
   try {
     const prRes = await fetch(`/api/print/${encodeURIComponent(guestId)}?force=true`, { method: 'POST' });
     const prData = await prRes.json();
 
     if (prRes.ok && (prData.print?.status === 'ok' || prData.print?.status === 'simulated')) {
-      toast(`✅ Ticket impreso y asistencia confirmada para ${currentGuest.name || guestId}`, 'success');
+      toast(`Credencial emitida y asistencia confirmada para ${currentGuest.name || guestId}`, 'success');
       showGuestPanel(prData.guest || currentGuest, 'new');
-      // REGLA: El usuario imprimió su ticket -> ahora sí regresa a bienvenida tras 6 segundos
       scheduleReset(true);
     } else {
-      toast(`❌ Error al imprimir: ${prData.message || prData.print?.message || 'Fallo de impresora'}`, 'error');
+      toast(`Error al imprimir: ${prData.message || prData.print?.message || 'Fallo de impresora'}`, 'error');
       btn.disabled = false;
-      btn.textContent = '🖨️ Reintentar Impresión';
+      if (txt) txt.textContent = 'Reintentar Impresión';
     }
   } catch (err) {
     toast('Error: ' + err.message, 'error');
     btn.disabled = false;
-    btn.textContent = '🖨️ Reintentar Impresión';
+    if (txt) txt.textContent = 'Reintentar Impresión';
   }
 }
 
@@ -898,60 +1003,88 @@ function showGuestPanel(guest, state) {
   banner.className = `status-banner ${state}`;
 
   if (state === 'new') {
-    icon.textContent  = '✅';
-    title.textContent = '¡Check-in Confirmado y Ticket Impreso!';
-    sub.textContent   = 'Tu asistencia ha sido registrada y tu etiqueta fue emitida en la Brother QL-800.';
+    icon.innerHTML    = SVG_CHECK;
+    title.textContent = 'Check-in Confirmado y Credencial Emitida';
+    sub.textContent   = 'Asistencia registrada y etiqueta impresa en Brother QL-800.';
     panel.className   = 'kiosk-panel state-new';
   } else if (state === 'printing') {
-    icon.textContent  = '🖨️';
-    title.textContent = 'Imprimiendo Ticket de Asistencia…';
-    sub.textContent   = 'Generando ficha con Nombre, Empresa y Cargo en Brother QL-800.';
+    icon.innerHTML    = SVG_PRINT;
+    title.textContent = 'Imprimiendo Credencial…';
+    sub.textContent   = 'Generando datos de acceso en Brother QL-800.';
     panel.className   = 'kiosk-panel state-new';
   } else if (state === 'duplicate') {
-    icon.textContent  = '⚠️';
-    title.textContent = 'Invitado Ya Registrado';
+    icon.innerHTML    = SVG_WARN;
+    title.textContent = 'Invitado con Registro Previo';
     const ts = guest.checked_in_at
       ? new Date(guest.checked_in_at).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })
       : '';
-    sub.textContent = ts ? `Asistencia registrada previamente a las ${ts}.` : 'Ya fue registrado anteriormente.';
+    sub.textContent = ts ? `Asistencia registrada previamente a las ${ts}.` : 'Ya fue registrado con anterioridad.';
     panel.className = 'kiosk-panel state-duplicate';
   } else if (state === 'pending') {
-    icon.textContent  = '✋';
+    icon.innerHTML    = SVG_INFO;
     title.textContent = 'Invitado Identificado — Asistencia Pendiente';
-    sub.textContent   = 'Pulsa el botón abajo para imprimir el ticket y confirmar el check-in.';
+    sub.textContent   = 'Presione el botón para imprimir la credencial y confirmar su asistencia.';
     panel.className   = 'kiosk-panel state-idle';
   } else if (state === 'error-print') {
-    icon.textContent  = '❌';
-    title.textContent = 'No se pudo Imprimir el Ticket';
-    sub.textContent   = 'Revisa la impresora. El check-in NO fue registrado aún.';
+    icon.innerHTML    = SVG_BAN;
+    title.textContent = 'Fallo en Impresión';
+    sub.textContent   = 'Revise la impresora Brother QL-800. El check-in permanece pendiente.';
     panel.className   = 'kiosk-panel state-error';
   } else {
-    icon.textContent  = '❌';
+    icon.innerHTML    = SVG_BAN;
     title.textContent = 'Código no Encontrado';
-    sub.textContent   = `Código: ${guest.id || '—'}. Consulta con el organizador.`;
+    sub.textContent   = `Código: ${guest.id || '—'}. Consulte en el módulo de acreditación.`;
     panel.className   = 'kiosk-panel state-error';
   }
 }
 
-function showError(code) {
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function showNotRegistered(code, detailMessage) {
+  currentGuest = null;
+
   document.getElementById('idle-state').style.display = 'none';
   document.getElementById('guest-result').classList.add('visible');
 
-  document.getElementById('g-name').textContent     = 'Invitado No Encontrado';
-  document.getElementById('g-code').textContent     = code;
-  document.getElementById('g-company').textContent  = '—';
-  document.getElementById('g-position').textContent = '—';
-  document.getElementById('btn-print-kiosk').classList.remove('show');
+  // Mensaje visual de Usuario No Registrado en Flat Design
+  const nameEl = document.getElementById('g-name');
+  nameEl.innerHTML = '<span style="color:#dc2626; font-weight:800; letter-spacing:-0.01em;">USUARIO NO REGISTRADO</span>';
+
+  const codeEl = document.getElementById('g-code');
+  codeEl.textContent = code ? `Identificación: ${code}` : 'Sin datos coincidentes';
+
+  document.getElementById('g-company').innerHTML = '<span style="color:#dc2626; font-weight:600;">No figura en la lista oficial</span>';
+  document.getElementById('g-position').innerHTML = '<span style="color:#475569;">Por favor acérquese al módulo de acreditación</span>';
+
+  const btn = document.getElementById('btn-print-kiosk');
+  btn.classList.remove('show');
+  btn.disabled = true;
 
   const banner = document.getElementById('status-banner');
   banner.className = 'status-banner error';
-  document.getElementById('banner-icon').textContent  = '❌';
-  document.getElementById('banner-title').textContent = 'Código Desconocido';
-  document.getElementById('banner-sub').textContent   = 'No figura en la lista de invitados.';
+  document.getElementById('banner-icon').innerHTML    = SVG_BAN;
+  document.getElementById('banner-title').textContent = 'Usuario No Registrado';
+  document.getElementById('banner-sub').textContent   = detailMessage || 'El código QR o datos no coinciden con ningún invitado del evento.';
   document.getElementById('kiosk-panel').className    = 'kiosk-panel state-error';
 
-  // No se imprimió ticket: resetea a idle en el kiosko
+  const camHint = document.getElementById('cam-instruction');
+  if (camHint) camHint.textContent = 'Usuario no registrado. Presente su código QR o acérquese a soporte.';
+
+  toast(`Usuario no registrado: ${code || 'desconocido'}`, 'error');
+
   scheduleReset(false);
+}
+
+function showError(code, detailMessage) {
+  showNotRegistered(code, detailMessage);
 }
 
 /**
@@ -969,12 +1102,12 @@ function scheduleReset(returnToWelcomeAfter = false) {
 
   const hintEl = document.getElementById('reset-hint');
   if (returnToWelcomeAfter) {
-    hintEl.textContent = `Check-in completado. Volviendo al inicio en ${RESET_DELAY / 1000} s…`;
+    hintEl.textContent = `Acreditación completada. Volviendo al inicio en ${RESET_DELAY / 1000} s…`;
     resetTimer = setTimeout(() => {
       returnToWelcome();
     }, RESET_DELAY);
   } else {
-    hintEl.textContent = `Listo para nuevo escaneo en ${RESET_DELAY / 1000} s…`;
+    hintEl.textContent = `Listo para nuevo intento en ${RESET_DELAY / 1000} s…`;
     resetTimer = setTimeout(() => {
       resetToIdle();
     }, RESET_DELAY);
@@ -984,11 +1117,19 @@ function scheduleReset(returnToWelcomeAfter = false) {
 function resetToIdle() {
   currentGuest = null;
   lastScannedCode = null;
+  unmatchedFaceFrames = 0;
 
   document.getElementById('idle-state').style.display = '';
   document.getElementById('guest-result').classList.remove('visible');
   document.getElementById('btn-print-kiosk').classList.remove('show');
   document.getElementById('kiosk-panel').className = 'kiosk-panel state-idle';
+
+  document.getElementById('g-name').textContent = '—';
+  document.getElementById('g-code').textContent = '—';
+  document.getElementById('g-company').textContent = '—';
+  document.getElementById('g-position').textContent = '—';
+
+  updateInstructionUI();
 
   const bar = document.getElementById('reset-bar');
   if (bar) {
@@ -1003,7 +1144,7 @@ function toast(msg, type = 'success') {
   t.className   = `toast ${type}`;
   t.textContent = msg;
   c.appendChild(t);
-  setTimeout(() => t.remove(), 4500);
+  setTimeout(() => t.remove(), 4000);
 }
 </script>
 

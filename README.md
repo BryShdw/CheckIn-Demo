@@ -23,13 +23,13 @@ Diseñado para ejecutarse en una **Intel NUC con Windows 10 / 11** conectada a l
    - **El estado cambia a "Registrado" únicamente cuando la etiqueta se imprime exitosamente**. Si ocurre un atasco o corte de hardware, el check-in se mantiene pendiente y el sistema avisa del error.
 
 4. **Diseño de Etiqueta Optimizado para DK-1208 (38mm × 90.3mm)**:
-   - **Sin código QR en el ticket impreso**: La etiqueta está maximizada visualmente para mostrar con alta legibilidad los datos del invitado.
-   - **Jerarquía tipográfica grande**:
-     - Franja superior: Nombre del Evento (configurable).
-     - Centro: Nombre completo en tipografía grande (con salto automático a 2 líneas si es extenso).
-     - Línea divisoria elegante.
-     - Empresa y Cargo destacados.
-     - Pie de etiqueta: ID de acreditación y distintivo de acceso oficial.
+   - **Exclusivo para Emblemas Pre-impresos**: Dado que el sticker se adhiere sobre un emblema que ya posee el logotipo e identidad gráfica del evento, **los únicos elementos impresos son Nombre y apellidos, Empresa y Puesto**.
+   - **Máxima Claridad y Legibilidad Tipográfica**:
+     - Nombre completo centrado en tipografía grande y negrita de alto impacto (con división equilibrada inteligente en 2 líneas si es extenso).
+     - Empresa en tamaño destacado.
+     - Puesto / Cargo en tamaño proporcional y legible.
+     - Auto-escalado de fuente dinámico (`fit_font`) para evitar truncamientos en textos largos.
+     - Sin elementos distractores: sin QR, sin franja superior, sin pie de página, sin ID y sin líneas.
    - **Renderizado nativo a 300 DPI (991 × 413 px en horizontal)** mediante el spooler de impresión GDI de Windows (`win32print`).
 
 5. **Kiosko de Autoservicio (`/`)**:
