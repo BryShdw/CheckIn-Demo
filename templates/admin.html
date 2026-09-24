@@ -49,7 +49,7 @@
     .source-toggle-btn.active {
       background: var(--accent);
       color: #fff;
-      box-shadow: 0 2px 8px rgba(79,126,248,0.4);
+      box-shadow: 0 2px 8px var(--accent-glow);
     }
     .source-toggle-btn.active.local {
       background: #0284c7;
@@ -89,7 +89,7 @@
     .mode-pill button.active {
       background: var(--accent);
       color: #ffffff;
-      box-shadow: 0 2px 8px rgba(79, 126, 248, 0.4);
+      box-shadow: 0 2px 8px var(--accent-glow);
       font-weight: 700;
     }
     #admin-mode-manual.active {
@@ -201,7 +201,7 @@
       display: flex; align-items: center; justify-content: center;
     }
     .webcam-target {
-      width: 140px; height: 170px; border: 2px dashed rgba(79, 126, 248, 0.75);
+      width: 140px; height: 170px; border: 2px dashed rgba(204, 35, 43, 0.75);
       border-radius: 50%;
     }
   </style>
@@ -209,7 +209,10 @@
 <body>
 
 <header>
-  <a class="logo" href="/"><span class="logo-icon">🎟</span><span>Check-in — Panel de Control</span></a>
+  <a class="logo" href="/" style="display:flex; align-items:center; gap:12px; text-decoration:none;">
+    <img src="/static/logo.png" alt="DACER" style="height:32px; object-fit:contain;">
+    <span style="font-weight:700; font-size:1.1rem; color:var(--text); letter-spacing:-0.01em;">Panel de Control</span>
+  </a>
   <div class="header-actions">
     <a href="/" class="btn">📷 Ir al Escáner</a>
     <button class="btn" onclick="openAddGuestModal()" style="background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600;">➕ Nuevo Invitado</button>
@@ -307,7 +310,7 @@
         <span style="font-size:0.95rem; font-weight:700;">Documentos de Invitados en OneDrive / SharePoint</span>
       </div>
       <div style="display:flex; gap:8px; align-items:center;">
-        <button class="btn" onclick="openAddDocModal()" style="font-size:0.85rem; font-weight:600; background:rgba(79,126,248,0.15); border-color:rgba(79,126,248,0.4); color:var(--accent);">
+        <button class="btn" onclick="openAddDocModal()" style="font-size:0.85rem; font-weight:600; background:rgba(204,35,43,0.15); border-color:rgba(204,35,43,0.4); color:var(--accent);">
           ➕ Agregar Enlace OneDrive
         </button>
       </div>
@@ -459,7 +462,7 @@
     </div>
 
     <!-- Guía Visual de Enrolamiento Facial en 4 Pasos -->
-    <div style="background:rgba(79, 126, 248, 0.08); border:1px solid rgba(79, 126, 248, 0.25); border-radius:8px; padding:10px 12px; margin-bottom:12px;">
+    <div style="background:rgba(204, 35, 43, 0.08); border:1px solid rgba(204, 35, 43, 0.25); border-radius:8px; padding:10px 12px; margin-bottom:12px;">
       <div style="font-size:0.75rem; font-weight:700; color:var(--accent); text-transform:uppercase; margin-bottom:6px; display:flex; align-items:center; gap:6px;">
         <span>💡</span><span>Guía para máxima precisión (evita confusiones y falsos rechazos):</span>
       </div>
@@ -1053,9 +1056,9 @@ function showFaceStatus(msg, type='info') {
     el.style.color = '#6ee7b7';
     el.style.border = '1px solid rgba(16, 185, 129, 0.4)';
   } else {
-    el.style.background = 'rgba(79, 126, 248, 0.2)';
-    el.style.color = '#93c5fd';
-    el.style.border = '1px solid rgba(79, 126, 248, 0.4)';
+    el.style.background = 'rgba(204, 35, 43, 0.15)';
+    el.style.color = '#ff9aa0';
+    el.style.border = '1px solid rgba(204, 35, 43, 0.35)';
   }
 }
 
