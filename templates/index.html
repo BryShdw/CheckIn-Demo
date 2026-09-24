@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kiosko de Registro de Invitados</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <style>
+    html, body { height: 100%; overflow: hidden; }
+
+    .kiosk-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      height: calc(100vh - 56px);
+      gap: 0;
+    }
+
+    @media (max-width: 900px) {
+      .kiosk-layout { grid-template-columns: 1fr; height: auto; }
+      html, body { overflow: auto; }
+    }
+
+    /* ── Lado izquierdo: cámara y fuentes de entrada ── */
+    .kiosk-camera {
+      position: relative;
+      background: #000;
+      display: flex;
+      flex-direction: column;
+      border-right: 2px solid var(--border);
+    }
+
+    #video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    #overlay-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    .camera-instruction {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      padding: 16px 20px;
+      background: linear-gradient(transparent, rgba(0,0,0,0.85));
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .camera-instruction p {
+      font-size: 1.05rem;
+      color: rgba(255,255,255,0.95);
+      font-weight: 500;
+    }
+
+    /* Cuadro de guía centrado */
+    .scan-guide {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -60%);
+      width: 220px; height: 220px;
+      pointer-events: none;
+    }
+
+    .scan-guide::before,
+    .scan-guide::after,
+    .scan-guide-inner::before,
+    .scan-guide-inner::after {
+      content: '';
+      position: absolute;
+      width: 30px; height: 30px;
+      border-color: rgba(79,126,248,0.85);
+      border-style: solid;
+    }
+
+    .scan-guide::before  { top: 0;  left: 0;  border-width: 3px 0 0 3px; }
+    .scan-guide::after   { top: 0;  right: 0; border-width: 3px 3px 0 0; }
+    .scan-guide-inner::before { bottom: 0; left: 0;  border-width: 0 0 3px 3px; }
+    .scan-guide-inner::after  { bottom: 0; right: 0; border-width: 0 3px 3px 0; }
+
+    .scan-guide.detected::before,
+    .scan-guide.detected::after,
+    .scan-guide.detected .scan-guide-inner::before,
+    .scan-guide.detected .scan-guide-inner::after {
+      border-color: var(--success);
+      transition: border-color 0.2s;
+    }
+
+    /* Barra de herramientas para pruebas de QR */
+    .qr-testing-bar {
+      position: absolute;
+      top: 14px; left: 14px; right: 14px;
+      display: flex;
+      gap: 8px;
+      z-index: 10;
+      flex-wrap: wrap;
+    }
+
+    .qr-pill-btn {
+      background: rgba(26,29,46,0.85);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255,255,255,0.2);
+      color: #fff;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all .2s;
+    }
+    .qr-pill-btn:hover { background: var(--accent); border-color: var(--accent); }
+
+    /* ── Lado derecho: panel de estado ── */
+    .kiosk-panel {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 30px 24px;
+      gap: 0;
+      transition: background 0.4s;
+      overflow-y: auto;
+    }
+
+    .kiosk-panel.state-idle       { background: var(--surface); }
+    .kiosk-panel.state-new        { background: linear-gradient(160deg, #0f2a1a 0%, var(--surface) 60%); }
+    .kiosk-panel.state-duplicate  { background: linear-gradient(160deg, #2a1a00 0%, var(--surface) 60%); }
+    .kiosk-panel.state-error      { background: linear-gradient(160deg, #2a0f0f 0%, var(--surface) 60%); }
+
+    /* Estado idle */
+    .idle-state {
+      text-align: center;
+      animation: breathe 3s ease-in-out infinite;
+      max-width: 440px;
+    }
+
+    @keyframes breathe {
+      0%, 100% { opacity: 0.8; transform: scale(1); }
+      50%       { opacity: 1;   transform: scale(1.02); }
+    }
+
+    .idle-icon { font-size: 4.5rem; margin-bottom: 16px; display: block; }
+    .idle-title { font-size: 1.8rem; font-weight: 700; margin-bottom: 10px; }
+    .idle-sub   { font-size: 0.95rem; color: var(--muted); line-height: 1.5; margin-bottom: 24px; }
+
+    /* Tarjeta del invitado */
+    .guest-result {
+      width: 100%;
+      max-width: 520px;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      animation: pop-in 0.35s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    .guest-result.visible { display: flex; }
+
+    @keyframes pop-in {
+      from { transform: scale(0.88); opacity: 0; }
+      to   { transform: scale(1);    opacity: 1; }
+    }
+
+    .status-banner {
+      width: 100%;
+      border-radius: 16px 16px 0 0;
+      padding: 18px 24px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      font-size: 1.05rem;
+      font-weight: 700;
+    }
+
+    .status-banner.new       { background: rgba(34,197,94,0.18);   border: 2px solid var(--success); border-bottom: none; color: var(--success); }
+    .status-banner.duplicate { background: rgba(245,158,11,0.18);  border: 2px solid var(--warn);    border-bottom: none; color: var(--warn); }
+    .status-banner.error     { background: rgba(239,68,68,0.18);   border: 2px solid var(--danger);  border-bottom: none; color: var(--danger); }
+
+    .status-banner .banner-icon { font-size: 2rem; flex-shrink: 0; }
+    .status-banner .banner-text { line-height: 1.3; }
+    .status-banner .banner-sub  { font-size: 0.82rem; font-weight: 400; opacity: 0.85; margin-top: 3px; }
+
+    .guest-body-card {
+      width: 100%;
+      background: var(--surface2);
+      border-radius: 0 0 16px 16px;
+      border: 2px solid var(--border);
+      border-top: none;
+      padding: 24px;
+    }
+
+    .status-banner.new       + .guest-body-card { border-color: var(--success); }
+    .status-banner.duplicate + .guest-body-card { border-color: var(--warn); }
+    .status-banner.error     + .guest-body-card { border-color: var(--danger); }
+
+    .g-name-large {
+      font-size: 1.8rem;
+      font-weight: 800;
+      line-height: 1.2;
+      margin-bottom: 6px;
+    }
+
+    .g-code-large {
+      font-family: monospace;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--accent);
+      margin-bottom: 16px;
+    }
+
+    .g-details { display: flex; flex-direction: column; gap: 10px; }
+
+    .g-detail-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+      background: rgba(255,255,255,0.04);
+      border-radius: 10px;
+    }
+
+    .g-detail-row .d-label { color: var(--muted); min-width: 75px; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; }
+    .g-detail-row .d-value { font-weight: 600; font-size: 1rem; color: var(--text); }
+
+    .reset-bar-wrap {
+      width: 100%;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      margin-top: 20px;
+      overflow: hidden;
+    }
+
+    .reset-bar {
+      height: 100%;
+      width: 100%;
+      border-radius: 2px;
+      background: var(--accent);
+      transform-origin: left;
+      transition: none;
+    }
+
+    .reset-hint {
+      margin-top: 8px;
+      font-size: 0.8rem;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .btn-print-kiosk {
+      width: 100%;
+      margin-top: 16px;
+      padding: 15px;
+      border: none;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all .2s;
+    }
+    .btn-print-kiosk:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); }
+    .btn-print-kiosk.show { display: flex; }
+
+    #process-canvas { display: none; }
+
+    /* ── Estilos de Pastillas y Selectores de Modo en Header ── */
+    .mode-pill-container {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .mode-pill-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .mode-pill {
+      display: inline-flex;
+      align-items: center;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 30px;
+      padding: 3px;
+      gap: 3px;
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.25);
+    }
+
+    .mode-pill button {
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      padding: 6px 13px;
+      border-radius: 20px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      user-select: none;
+      outline: none;
+    }
+
+    .mode-pill button:hover:not(.active) {
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    /* Activo: Selector de Método (QR / Facial) -> Azul Neón */
+    .mode-pill button.active {
+      background: var(--accent);
+      color: #ffffff;
+      box-shadow: 0 2px 10px rgba(79, 126, 248, 0.45);
+      font-weight: 700;
+    }
+
+    /* Activo: Modo Manual (Ámbar / Naranja destacado) */
+    #tab-manual.active {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: #ffffff;
+      box-shadow: 0 2px 10px rgba(245, 158, 11, 0.45);
+      font-weight: 700;
+    }
+
+    /* Activo: Modo Automático (Verde brillante) */
+    #tab-auto.active {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: #ffffff;
+      box-shadow: 0 2px 10px rgba(16, 185, 129, 0.45);
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<header>
+  <a class="logo" href="/">
+    <span class="logo-icon">🎟</span>
+    <span>Kiosko de Registro — Demo</span>
+  </a>
+  <div class="header-actions">
+    <div class="mode-pill" title="Método de Acreditación">
+      <button id="meth-both" class="active" onclick="setMethod('both')">🔄 QR + Facial</button>
+      <button id="meth-face" onclick="setMethod('face')">👤 Facial</button>
+      <button id="meth-qr"   onclick="setMethod('qr')">🎟 QR</button>
+    </div>
+    <div class="mode-pill" title="Modo de Impresión">
+      <button id="tab-manual" class="active" onclick="setMode('manual')">✋ Manual</button>
+      <button id="tab-auto"   onclick="setMode('auto')">⚡ Auto</button>
+    </div>
+    <div class="printer-badge">
+      <span class="printer-dot ready" id="printer-dot"></span>
+      <span id="printer-label">Brother QL-800</span>
+    </div>
+    <a href="/admin" class="btn">📋 Admin</a>
+  </div>
+</header>
+
+<!-- Contenido principal -->
+<div class="kiosk-layout">
+
+  <!-- LADO IZQUIERDO: Cámara y Entrada de QR / Facial -->
+  <div class="kiosk-camera">
+    <video id="video" autoplay muted playsinline></video>
+    <canvas id="overlay-canvas"></canvas>
+    <canvas id="process-canvas"></canvas>
+
+    <!-- Carga manual de imagen QR -->
+    <div class="qr-testing-bar">
+      <label class="qr-pill-btn" title="Cargar una imagen con código QR">
+        📁 Cargar imagen QR
+        <input type="file" id="qr-file-input" accept="image/*" style="display:none;" onchange="handleQRFileUpload(event)">
+      </label>
+    </div>
+
+    <!-- Guía de escaneo -->
+    <div class="scan-guide" id="scan-guide">
+      <div class="scan-guide-inner"></div>
+    </div>
+
+    <!-- Instrucción inferior con lector de código manual -->
+    <div class="camera-instruction">
+      <p id="cam-instruction">📷 Muestra tu código QR o ubícate frente a la cámara</p>
+      <div style="display:flex; gap:6px; max-width:320px; width:100%;">
+        <input type="text" id="manual-code-input" placeholder="O ingresa ID (ej. INV-001)"
+               style="flex:1; padding:8px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.3); background:rgba(0,0,0,0.6); color:#fff; font-family:monospace; text-transform:uppercase; font-size:0.88rem; outline:none;"
+               onkeydown="if(event.key==='Enter') submitManualCode()">
+        <button class="btn" style="padding:8px 12px; font-weight:600;" onclick="submitManualCode()">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- LADO DERECHO: Panel de estado -->
+  <div class="kiosk-panel state-idle" id="kiosk-panel">
+
+    <!-- Estado inicial: esperando escaneo -->
+    <div class="idle-state" id="idle-state">
+      <span class="idle-icon">👤🎟️</span>
+      <div class="idle-title">Acreditación y Check-in</div>
+      <div class="idle-sub">Muestra tu <strong>código QR</strong> o <strong>mira a la cámara</strong>.<br>Tu etiqueta se imprimirá automáticamente en la <strong>Brother QL-800</strong>.</div>
+    </div>
+
+    <!-- Resultado del escaneo -->
+    <div class="guest-result" id="guest-result">
+
+      <!-- Banner de estado -->
+      <div class="status-banner" id="status-banner">
+        <span class="banner-icon" id="banner-icon"></span>
+        <div class="banner-text">
+          <div id="banner-title"></div>
+          <div class="banner-sub" id="banner-sub"></div>
+        </div>
+      </div>
+
+      <!-- Datos del invitado -->
+      <div class="guest-body-card">
+        <div class="g-name-large" id="g-name">—</div>
+        <div class="g-code-large" id="g-code">—</div>
+        <div class="g-details">
+          <div class="g-detail-row">
+            <span class="d-label">Empresa</span>
+            <span class="d-value" id="g-company">—</span>
+          </div>
+          <div class="g-detail-row">
+            <span class="d-label">Cargo</span>
+            <span class="d-value" id="g-position">—</span>
+          </div>
+        </div>
+
+        <!-- Botón manual -->
+        <button class="btn-print-kiosk" id="btn-print-kiosk" onclick="printCurrent()">
+          🖨️ Imprimir Etiqueta
+        </button>
+
+        <!-- Barra de auto-reset -->
+        <div class="reset-bar-wrap">
+          <div class="reset-bar" id="reset-bar"></div>
+        </div>
+        <div class="reset-hint" id="reset-hint">Pantalla nueva en 6 s…</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+
+<!-- jsQR para decodificación de QR -->
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+
+<script>
+let currentGuest    = null;
+let currentMode     = 'manual'; // Por defecto MODO MANUAL (requiere confirmación para imprimir)
+let scanMethod      = 'both';   // 'both' | 'face' | 'qr'
+let scanning        = true;
+let lastScannedCode = null;
+let lastScanTs      = 0;
+let resetTimer      = null;
+const SCAN_COOLDOWN = 4000;
+const RESET_DELAY   = 6000;
+
+let isFaceProcessing  = false;
+let lastFaceCheckTs   = 0;
+const FACE_INTERVAL   = 650;   // ms entre llamadas de inferencia facial
+
+const video         = document.getElementById('video');
+const processCanvas = document.getElementById('process-canvas');
+const overlayCanvas = document.getElementById('overlay-canvas');
+const pCtx          = processCanvas.getContext('2d', { willReadFrequently: true });
+const oCtx          = overlayCanvas.getContext('2d');
+
+function setMethod(method) {
+  scanMethod = method;
+  document.getElementById('meth-both').classList.toggle('active', method === 'both');
+  document.getElementById('meth-face').classList.toggle('active', method === 'face');
+  document.getElementById('meth-qr').classList.toggle('active',   method === 'qr');
+
+  const hint = document.getElementById('cam-instruction');
+  if (method === 'both') {
+    hint.textContent = '📷 Muestra tu código QR o ubícate frente a la cámara';
+  } else if (method === 'face') {
+    hint.textContent = '👤 Ubica tu rostro frente a la cámara';
+  } else {
+    hint.textContent = '🎟️ Muestra tu código QR hacia la cámara';
+  }
+}
+
+async function initCamera() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } }
+    });
+    video.srcObject = stream;
+    video.onloadedmetadata = () => {
+      processCanvas.width  = video.videoWidth;
+      processCanvas.height = video.videoHeight;
+      overlayCanvas.width  = video.videoWidth;
+      overlayCanvas.height = video.videoHeight;
+    };
+  } catch (err) {
+    document.getElementById('cam-instruction').textContent = '⚠️ Cámara no disponible. Usa el lector USB o ingresa el código manual.';
+  }
+}
+
+function scanLoop() {
+  if (scanning && video.readyState === video.HAVE_ENOUGH_DATA) {
+    pCtx.drawImage(video, 0, 0, processCanvas.width, processCanvas.height);
+    oCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+
+    let qrFound = false;
+
+    // 1. Escaneo de QR (si el método es 'both' o 'qr')
+    if (scanMethod === 'both' || scanMethod === 'qr') {
+      const imageData = pCtx.getImageData(0, 0, processCanvas.width, processCanvas.height);
+      const code = jsQR(imageData.data, imageData.width, imageData.height, {
+        inversionAttempts: 'dontInvert'
+      });
+
+      if (code) {
+        qrFound = true;
+        drawQRBox(code.location);
+        document.getElementById('scan-guide').classList.add('detected');
+        document.getElementById('cam-instruction').textContent = '✅ QR detectado';
+        onQRDetected(code.data);
+      }
+    }
+
+    // 2. Reconocimiento Facial (si no se detectó QR y el método es 'both' o 'face')
+    if (!qrFound && (scanMethod === 'both' || scanMethod === 'face')) {
+      const now = Date.now();
+      if (!isFaceProcessing && (now - lastFaceCheckTs) > FACE_INTERVAL && (now - lastScanTs) > SCAN_COOLDOWN) {
+        lastFaceCheckTs = now;
+        checkFaceMatch();
+      }
+      if (!isFaceProcessing) {
+        document.getElementById('scan-guide').classList.remove('detected');
+        if (scanMethod === 'both') {
+          document.getElementById('cam-instruction').textContent = '📷 Muestra tu código QR o ubícate frente a la cámara';
+        } else {
+          document.getElementById('cam-instruction').textContent = '👤 Ubica tu rostro frente a la cámara';
+        }
+      }
+    }
+  }
+  requestAnimationFrame(scanLoop);
+}
+
+async function checkFaceMatch() {
+  isFaceProcessing = true;
+  try {
+    // Tomar fotograma en calidad equilibrada
+    const frameDataUrl = processCanvas.toDataURL('image/jpeg', 0.82);
+
+    const res = await fetch('/api/facial-match', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        image_base64: frameDataUrl,
+        auto_checkin: (currentMode === 'auto')
+      })
+    });
+
+    const data = await res.json();
+
+    if (data.bbox) {
+      drawFaceBox(data.bbox, data.guest ? data.guest.name : null, data.similarity);
+    }
+
+    if (data.status === 'ok') {
+      document.getElementById('scan-guide').classList.add('detected');
+      lastScannedCode = data.guest.id;
+      lastScanTs = Date.now();
+      showGuestPanel(data.guest, 'new');
+      toast(`✅ ¡Rostro reconocido! Ticket impreso para ${data.guest.name}`, 'success');
+      scheduleReset();
+    } else if (data.status === 'already_registered') {
+      document.getElementById('scan-guide').classList.add('detected');
+      lastScannedCode = data.guest.id;
+      lastScanTs = Date.now();
+      showGuestPanel(data.guest, 'duplicate');
+      toast(`⚠️ ${data.guest.name} ya cuenta con asistencia previa`, 'warn');
+      scheduleReset();
+    } else if (data.status === 'identified') {
+      // Modo manual
+      document.getElementById('scan-guide').classList.add('detected');
+      lastScannedCode = data.guest.id;
+      lastScanTs = Date.now();
+      showGuestPanel(data.guest, data.guest.checked_in ? 'duplicate' : 'pending');
+      const btn = document.getElementById('btn-print-kiosk');
+      btn.textContent = data.guest.checked_in ? '🖨️ Reimprimir Ticket' : '🖨️ Imprimir Ticket y Confirmar Asistencia';
+      btn.classList.add('show');
+      btn.disabled = false;
+      scheduleReset();
+    } else if (data.status === 'print_failed') {
+      showGuestPanel(data.guest, 'error-print');
+      toast(`❌ Error al imprimir: ${data.message}`, 'error');
+      scheduleReset();
+    }
+  } catch (err) {
+    // Silencioso para no saturar toasts si no hay conexión
+  } finally {
+    isFaceProcessing = false;
+  }
+}
+
+function drawFaceBox(box, label, similarity) {
+  const [x, y, w, h] = box;
+  oCtx.save();
+  oCtx.beginPath();
+  oCtx.rect(x, y, w, h);
+  oCtx.lineWidth = 3;
+  oCtx.strokeStyle = label ? '#22c55e' : '#38bdf8';
+  oCtx.stroke();
+
+  oCtx.fillStyle = label ? 'rgba(34,197,94,0.14)' : 'rgba(56,189,248,0.12)';
+  oCtx.fill();
+
+  if (label) {
+    oCtx.fillStyle = '#22c55e';
+    oCtx.font = 'bold 16px sans-serif';
+    const simText = similarity ? ` (${Math.round(similarity * 100)}%)` : '';
+    oCtx.fillText(`👤 ${label}${simText}`, x, Math.max(22, y - 8));
+  }
+  oCtx.restore();
+}
+
+function drawQRBox(loc) {
+  oCtx.beginPath();
+  oCtx.moveTo(loc.topLeftCorner.x,     loc.topLeftCorner.y);
+  oCtx.lineTo(loc.topRightCorner.x,    loc.topRightCorner.y);
+  oCtx.lineTo(loc.bottomRightCorner.x, loc.bottomRightCorner.y);
+  oCtx.lineTo(loc.bottomLeftCorner.x,  loc.bottomLeftCorner.y);
+  oCtx.closePath();
+  oCtx.lineWidth   = 4;
+  oCtx.strokeStyle = '#22c55e';
+  oCtx.stroke();
+  oCtx.fillStyle   = 'rgba(34,197,94,0.12)';
+  oCtx.fill();
+}
+
+async function onQRDetected(rawCode) {
+  const code = rawCode.trim().toUpperCase();
+  const now  = Date.now();
+
+  if (code === lastScannedCode && (now - lastScanTs) < SCAN_COOLDOWN) return;
+  lastScannedCode = code;
+  lastScanTs      = now;
+
+  try {
+    const res   = await fetch(`/api/guest/${encodeURIComponent(code)}`);
+    const guest = await res.json();
+
+    if (!res.ok) {
+      showError(code);
+      return;
+    }
+
+    if (currentMode === 'auto') {
+      await doCheckinAndPrint(guest);
+    } else {
+      // Modo manual: mostrar datos en estado pendiente (o duplicado si ya tenía checkin)
+      showGuestPanel(guest, guest.checked_in ? 'duplicate' : 'pending');
+      const btn = document.getElementById('btn-print-kiosk');
+      if (!guest.checked_in) {
+        btn.textContent = '🖨️ Imprimir Ticket y Confirmar Asistencia';
+        btn.classList.add('show');
+        btn.disabled = false;
+      } else {
+        btn.textContent = '🖨️ Reimprimir Ticket (Copia)';
+        btn.classList.add('show');
+        btn.disabled = false;
+      }
+      scheduleReset();
+    }
+  } catch (err) {
+    toast('Error: ' + err.message, 'error');
+  }
+}
+
+async function doCheckinAndPrint(guest) {
+  const guestId = guest.id || guest.code;
+  const wasRegistered = guest.checked_in;
+
+  if (wasRegistered) {
+    showGuestPanel(guest, 'duplicate');
+    toast(`⚠️ ${guest.name || guestId} ya cuenta con asistencia registrada previamente`, 'warn');
+    scheduleReset();
+    return;
+  }
+
+  // 1. Mostrar de inmediato que se está procesando e imprimiendo el ticket
+  showGuestPanel(guest, 'printing');
+  toast(`🖨️ Imprimiendo ficha de asistencia para ${guest.name || guestId}…`, 'warn');
+
+  try {
+    // 2. Imprimir ticket: El backend únicamente marcará el check-in si la impresión es exitosa
+    const prRes  = await fetch(`/api/print/${encodeURIComponent(guestId)}`, { method: 'POST' });
+    const prData = await prRes.json();
+
+    if (prRes.ok && (prData.print?.status === 'ok' || prData.print?.status === 'simulated')) {
+      // Impresión exitosa -> Asistencia y check-in confirmado
+      showGuestPanel(prData.guest || guest, 'new');
+      toast(`✅ Ticket impreso y asistencia registrada para ${guest.name || guestId}`, 'success');
+    } else if (prData.status === 'already_registered') {
+      showGuestPanel(prData.guest || guest, 'duplicate');
+    } else {
+      showGuestPanel(guest, 'error-print');
+      toast(`❌ Error de impresión: ${prData.message || prData.print?.message || 'Fallo de impresora'}`, 'error');
+    }
+  } catch (err) {
+    showGuestPanel(guest, 'error-print');
+    toast('❌ Error de comunicación: ' + err.message, 'error');
+  }
+
+  scheduleReset();
+}
+
+async function printCurrent() {
+  if (!currentGuest) return;
+  const guestId = currentGuest.id || currentGuest.code;
+  const btn = document.getElementById('btn-print-kiosk');
+  btn.disabled = true;
+  btn.textContent = '⏳ Imprimiendo ficha…';
+
+  try {
+    // Al imprimir manualmente el ticket, se envía /api/print (con force=true para permitir reimpresión si aplica)
+    const prRes = await fetch(`/api/print/${encodeURIComponent(guestId)}?force=true`, { method: 'POST' });
+    const prData = await prRes.json();
+
+    if (prRes.ok && (prData.print?.status === 'ok' || prData.print?.status === 'simulated')) {
+      toast(`✅ Ticket impreso y asistencia confirmada para ${currentGuest.name || guestId}`, 'success');
+      showGuestPanel(prData.guest || currentGuest, 'new');
+    } else {
+      toast(`❌ Error al imprimir: ${prData.message || prData.print?.message || 'Fallo de impresora'}`, 'error');
+    }
+  } catch (err) {
+    toast('Error: ' + err.message, 'error');
+  }
+
+  btn.classList.remove('show');
+  btn.textContent = '🖨️ Imprimir Ticket y Confirmar Asistencia';
+  scheduleReset();
+}
+
+function showGuestPanel(guest, state) {
+  currentGuest = guest;
+
+  document.getElementById('idle-state').style.display = 'none';
+  document.getElementById('guest-result').classList.add('visible');
+
+  document.getElementById('g-name').textContent     = guest.name || '—';
+  document.getElementById('g-code').textContent     = guest.id || '—';
+  document.getElementById('g-company').textContent  = guest.company || '—';
+  document.getElementById('g-position').textContent = guest.position || '—';
+
+  const banner = document.getElementById('status-banner');
+  const panel  = document.getElementById('kiosk-panel');
+  const icon   = document.getElementById('banner-icon');
+  const title  = document.getElementById('banner-title');
+  const sub    = document.getElementById('banner-sub');
+
+  banner.className = `status-banner ${state}`;
+
+  if (state === 'new') {
+    icon.textContent  = '✅';
+    title.textContent = '¡Check-in Confirmado y Ticket Impreso!';
+    sub.textContent   = 'Tu asistencia ha sido registrada y tu etiqueta fue emitida en la Brother QL-800.';
+    panel.className   = 'kiosk-panel state-new';
+  } else if (state === 'printing') {
+    icon.textContent  = '🖨️';
+    title.textContent = 'Imprimiendo Ticket de Asistencia…';
+    sub.textContent   = 'Generando ficha con Nombre, Empresa y Cargo en Brother QL-800.';
+    panel.className   = 'kiosk-panel state-new';
+  } else if (state === 'duplicate') {
+    icon.textContent  = '⚠️';
+    title.textContent = 'Invitado Ya Registrado';
+    const ts = guest.checked_in_at
+      ? new Date(guest.checked_in_at).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })
+      : '';
+    sub.textContent = ts ? `Asistencia registrada previamente a las ${ts}.` : 'Ya fue registrado anteriormente.';
+    panel.className = 'kiosk-panel state-duplicate';
+  } else if (state === 'pending') {
+    icon.textContent  = '✋';
+    title.textContent = 'Invitado Identificado — Asistencia Pendiente';
+    sub.textContent   = 'Pulsa el botón abajo para imprimir el ticket y confirmar el check-in.';
+    panel.className   = 'kiosk-panel state-idle';
+  } else if (state === 'error-print') {
+    icon.textContent  = '❌';
+    title.textContent = 'No se pudo Imprimir el Ticket';
+    sub.textContent   = 'Revisa la impresora. El check-in NO fue registrado aún.';
+    panel.className   = 'kiosk-panel state-error';
+  } else {
+    icon.textContent  = '❌';
+    title.textContent = 'QR no Encontrado';
+    sub.textContent   = `Código: ${guest.id || '—'}. Consulta con el organizador.`;
+    panel.className   = 'kiosk-panel state-error';
+  }
+}
+
+function showError(code) {
+  document.getElementById('idle-state').style.display = 'none';
+  document.getElementById('guest-result').classList.add('visible');
+
+  document.getElementById('g-name').textContent     = 'Invitado No Encontrado';
+  document.getElementById('g-code').textContent     = code;
+  document.getElementById('g-company').textContent  = '—';
+  document.getElementById('g-position').textContent = '—';
+  document.getElementById('btn-print-kiosk').classList.remove('show');
+
+  const banner = document.getElementById('status-banner');
+  banner.className = 'status-banner error';
+  document.getElementById('banner-icon').textContent  = '❌';
+  document.getElementById('banner-title').textContent = 'Código Desconocido';
+  document.getElementById('banner-sub').textContent   = 'No figura en la lista de invitados.';
+  document.getElementById('kiosk-panel').className    = 'kiosk-panel state-error';
+
+  scheduleReset();
+}
+
+function scheduleReset() {
+  clearTimeout(resetTimer);
+  const bar = document.getElementById('reset-bar');
+  bar.classList.remove('animate');
+  void bar.offsetWidth;
+  bar.style.transition = `transform ${RESET_DELAY}ms linear`;
+  bar.style.transform  = 'scaleX(0)';
+
+  document.getElementById('reset-hint').textContent = `Pantalla nueva en ${RESET_DELAY / 1000} s…`;
+  resetTimer = setTimeout(resetToIdle, RESET_DELAY);
+}
+
+function resetToIdle() {
+  currentGuest = null;
+  lastScannedCode = null;
+
+  document.getElementById('idle-state').style.display = '';
+  document.getElementById('guest-result').classList.remove('visible');
+  document.getElementById('btn-print-kiosk').classList.remove('show');
+  document.getElementById('kiosk-panel').className = 'kiosk-panel state-idle';
+
+  const bar = document.getElementById('reset-bar');
+  bar.style.transition = 'none';
+  bar.style.transform  = 'scaleX(1)';
+}
+
+function setMode(mode) {
+  currentMode = mode;
+  document.getElementById('tab-manual').classList.toggle('active', mode === 'manual');
+  document.getElementById('tab-auto').classList.toggle('active',   mode === 'auto');
+  toast(mode === 'auto' ? '⚡ Modo automático (check-in + impresión directa)' : '✋ Modo manual (requiere confirmar)', 'warn');
+}
+
+/* Lector manual / USB Barcode Gun */
+function submitManualCode() {
+  const inp = document.getElementById('manual-code-input');
+  const code = inp.value.trim().toUpperCase();
+  if (!code) return;
+  inp.value = '';
+  onQRDetected(code);
+}
+
+/* Subida o selección de archivo QR de qr_output */
+function handleQRFileUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    decodeImageURL(e.target.result);
+  };
+  reader.readAsDataURL(file);
+}
+
+function decodeImageURL(src) {
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = img.width;
+    canvas.height = img.height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0);
+    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const code = jsQR(imgData.data, canvas.width, canvas.height);
+    if (code) {
+      toast(`🔎 QR detectado en imagen: ${code.data}`, 'success');
+      onQRDetected(code.data);
+    } else {
+      toast('❌ No se encontró código QR legible en la imagen seleccionada', 'error');
+    }
+  };
+  img.src = src;
+}
+
+async function checkPrinterStatus() {
+  try {
+    const res  = await fetch('/api/printer/status');
+    const data = await res.json();
+    const dot  = document.getElementById('printer-dot');
+    const lbl  = document.getElementById('printer-label');
+    if (data.installed) {
+      dot.className = 'printer-dot ready';
+      lbl.textContent = `${data.name} lista (${data.label})`;
+    } else {
+      dot.className = 'printer-dot';
+      lbl.textContent = `${data.name} no detectada`;
+    }
+  } catch { /* silencioso */ }
+}
+
+function toast(msg, type = 'success') {
+  const c = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className   = `toast ${type}`;
+  t.textContent = msg;
+  c.appendChild(t);
+  setTimeout(() => t.remove(), 4500);
+}
+
+initCamera();
+checkPrinterStatus();
+requestAnimationFrame(scanLoop);
+</script>
+
+</body>
+</html>

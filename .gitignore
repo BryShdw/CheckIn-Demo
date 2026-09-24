@@ -1,0 +1,44 @@
+# Entorno virtual
+venv/
+env/
+ENV/
+.venv/
+
+# Python cache y compilados
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyd
+
+# Archivos de respaldo y carpetas intermedias
+*.zip
+*.tar.gz
+*.rar
+*.7z
+guest-checkin/
+
+# Datos locales de asistencia y cachés temporales
+guests_cache.csv
+onedrive_caches/*.csv
+!onedrive_caches/.gitkeep
+
+# Imágenes biométricas faciales locales
+face_data/images/*
+!face_data/images/.gitkeep
+
+# Salidas de prueba y temporales
+qr_output/*.png
+!qr_output/.gitkeep
+invitaciones_demo.docx
+scratch/
+*.log
+
+# Modelos ONNX (face_service.py los descarga automáticamente al iniciar si no existen)
+models/*.onnx
+!models/.gitkeep
+
+# IDEs y sistemas operativos
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

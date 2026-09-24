@@ -1,0 +1,1074 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin — Gestión de Invitados e Impresión</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <style>
+    .source-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 600;
+    }
+    .source-badge.onedrive { background: rgba(0,120,212,0.15); color: #4fa3e0; border: 1px solid rgba(0,120,212,0.3); }
+    .source-badge.cache    { background: rgba(245,158,11,0.15); color: var(--warn);    border: 1px solid rgba(245,158,11,0.3); }
+    .source-badge.local    { background: rgba(148,163,184,0.15); color: var(--muted);  border: 1px solid rgba(148,163,184,0.25); }
+    .source-badge.none     { background: rgba(239,68,68,0.15);  color: var(--danger);  border: 1px solid rgba(239,68,68,0.3); }
+
+    .onedrive-bar {
+      background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border);
+      padding: 14px 18px; margin-bottom: 20px;
+      display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    }
+    .onedrive-bar .od-user { font-size: 0.88rem; color: var(--muted); flex: 1; min-width: 240px; }
+    .onedrive-bar strong   { color: var(--text); }
+
+    .source-toggle-group {
+      display: inline-flex;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 3px;
+      gap: 3px;
+    }
+    .source-toggle-btn {
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      border-radius: 16px;
+      padding: 6px 14px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .source-toggle-btn:hover { color: var(--text); }
+    .source-toggle-btn.active {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(79,126,248,0.4);
+    }
+    .source-toggle-btn.active.local {
+      background: #0284c7;
+    }
+
+
+    .printer-status-bar {
+      background: var(--surface2); border-radius: 10px; border: 1px solid var(--border);
+      padding: 10px 16px; margin-bottom: 20px;
+      display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+    }
+
+    .btn-action {
+      padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border);
+      background: var(--surface2); color: var(--text); cursor: pointer;
+      font-size: 0.82rem; font-weight: 500; display: inline-flex; align-items: center; gap: 4px;
+      transition: all .2s;
+    }
+    .btn-action:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-action.print:hover { border-color: #3b82f6; background: rgba(59,130,246,0.15); color: #60a5fa; }
+    .btn-action.status-toggle { border-color: rgba(255,255,255,0.15); }
+    .btn-action.status-toggle:hover { border-color: var(--warn); color: var(--warn); }
+    .btn-action.delete { border-color: rgba(239,68,68,0.3); color: #fca5a5; }
+    .btn-action.delete:hover { border-color: var(--danger); background: rgba(239,68,68,0.15); color: var(--danger); }
+
+    /* Modal */
+    .modal-backdrop {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.65);
+      display: none; align-items: center; justify-content: center; z-index: 1000;
+      backdrop-filter: blur(4px);
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); width: 92%; max-width: 480px;
+      padding: 24px; box-shadow: var(--shadow); animation: slide-in 0.2s ease-out;
+    }
+    .modal-title { font-size: 1.2rem; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; font-size: 0.82rem; color: var(--muted); margin-bottom: 6px; font-weight: 600; text-transform: uppercase; }
+    .form-group input {
+      width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border);
+      background: var(--surface2); color: var(--text); font-size: 0.95rem; outline: none;
+    }
+    .form-group input:focus { border-color: var(--accent); }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+
+    .search-filter-box {
+      display: flex; gap: 10px; margin-bottom: 14px; align-items: center; flex-wrap: wrap;
+    }
+    .search-filter-input {
+      flex: 1; min-width: 220px; padding: 10px 14px; border-radius: 8px;
+      border: 1px solid var(--border); background: var(--surface);
+      color: var(--text); font-size: 0.9rem; outline: none;
+    }
+    .search-filter-input:focus { border-color: var(--accent); }
+
+    /* Estilos de Enrolamiento Facial */
+    .face-btn {
+      padding: 5px 10px; border-radius: 20px; font-size: 0.78rem; font-weight: 600;
+      border: 1px solid rgba(148, 163, 184, 0.3); background: rgba(148, 163, 184, 0.1);
+      color: var(--muted); cursor: pointer; transition: all 0.2s;
+    }
+    .face-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .face-btn.active {
+      background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.4);
+      color: #34d399;
+    }
+    .face-btn.active:hover { background: rgba(16, 185, 129, 0.25); }
+
+    .face-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(105px, 1fr)); gap: 10px;
+      margin: 12px 0 18px 0;
+    }
+    .face-card {
+      position: relative; border-radius: 8px; overflow: hidden;
+      border: 1px solid var(--border); background: var(--surface2);
+      aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    }
+    .face-card img { width: 100%; height: 100%; object-fit: cover; }
+    .face-card .del-btn {
+      position: absolute; top: 4px; right: 4px; width: 24px; height: 24px;
+      border-radius: 50%; background: rgba(239, 68, 68, 0.85); color: #fff;
+      border: none; cursor: pointer; font-size: 0.75rem; display: flex;
+      align-items: center; justify-content: center; transition: transform 0.15s;
+    }
+    .face-card .del-btn:hover { transform: scale(1.15); background: var(--danger); }
+    .face-card-empty {
+      border: 2px dashed rgba(255, 255, 255, 0.15); color: var(--muted);
+      font-size: 0.75rem; text-align: center; padding: 8px;
+    }
+
+    .webcam-box {
+      width: 100%; max-width: 380px; height: 240px; background: #000;
+      border-radius: 8px; overflow: hidden; position: relative; margin: 0 auto 12px auto;
+      border: 1px solid var(--border);
+    }
+    .webcam-box video { width: 100%; height: 100%; object-fit: cover; }
+    .webcam-overlay {
+      position: absolute; inset: 0; pointer-events: none;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .webcam-target {
+      width: 140px; height: 170px; border: 2px dashed rgba(79, 126, 248, 0.75);
+      border-radius: 50%;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <a class="logo" href="/"><span class="logo-icon">🎟</span><span>Check-in — Panel de Control</span></a>
+  <div class="header-actions">
+    <a href="/" class="btn">📷 Ir al Escáner</a>
+    <button class="btn" onclick="openAddGuestModal()" style="background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600;">➕ Nuevo Invitado</button>
+    <button class="btn danger" onclick="confirmReset()">♻️ Resetear check-ins</button>
+  </div>
+</header>
+
+<div class="admin-wrap" style="max-width: 1100px;">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+    <h1 style="font-size:1.4rem; font-weight:700;">📋 Administración de Invitados y Fichas</h1>
+    <span style="font-size:0.85rem; color:var(--muted);">Cinta: <strong>DK-1208 (38mm × 90.3mm)</strong></span>
+  </div>
+
+  <!-- Estado de Impresora Brother -->
+  <div class="printer-status-bar" id="printer-bar">
+    <div style="display:flex; align-items:center; gap:8px;">
+      <span class="printer-dot" id="printer-dot"></span>
+      <span style="font-size:0.9rem;" id="printer-info">Detectando impresora Brother…</span>
+    </div>
+    <div style="display:flex; gap:8px;">
+      <button class="btn" style="font-size:0.8rem; padding:6px 12px;" onclick="printSampleTest()">
+        🖨️ Probar Impresión de Etiqueta
+      </button>
+    </div>
+  </div>
+
+  <!-- Barra de Gestión de Documentos OneDrive & Caché -->
+  <div class="onedrive-bar" id="onedrive-bar" style="flex-direction:column; gap:14px; padding:16px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; width:100%;">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="font-size:1.15rem;">☁️</span>
+        <span style="font-size:0.95rem; font-weight:700;">Documentos de Invitados en OneDrive / SharePoint</span>
+      </div>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <button class="btn" onclick="openAddDocModal()" style="font-size:0.85rem; font-weight:600; background:rgba(79,126,248,0.15); border-color:rgba(79,126,248,0.4); color:var(--accent);">
+          ➕ Agregar Enlace OneDrive
+        </button>
+      </div>
+    </div>
+
+    <!-- Selector de Documento Activo y Acciones -->
+    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; width:100%;">
+      <label for="doc-selector" style="font-size:0.85rem; color:var(--muted); font-weight:600; white-space:nowrap;">
+        Documento Activo:
+      </label>
+      <select id="doc-selector" onchange="onSelectDocument(this.value)" style="flex:1; min-width:240px; padding:8px 12px; border-radius:8px; border:1px solid var(--border); background:var(--surface2); color:var(--text); font-size:0.9rem; outline:none; font-weight:500;">
+        <option value="">Cargando documentos…</option>
+      </select>
+      <button class="btn" id="btn-sync-doc" onclick="syncActiveDoc()" style="font-size:0.85rem; padding:8px 14px;" title="Descargar la última versión desde OneDrive">
+        🔄 Sincronizar
+      </button>
+      <button class="btn danger" id="btn-del-doc" onclick="deleteActiveDoc()" style="font-size:0.85rem; padding:8px 14px;" title="Eliminar este enlace y su archivo en caché">
+        🗑️ Eliminar
+      </button>
+    </div>
+
+    <!-- Metadatos del documento activo -->
+    <div style="background:var(--surface2); border-radius:8px; padding:10px 14px; font-size:0.83rem; color:var(--muted); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; width:100%;">
+      <div id="doc-meta-info">Cargando detalles del documento activo…</div>
+      <div id="doc-sync-info"></div>
+    </div>
+  </div>
+
+
+  <!-- Estadísticas -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-num" id="stat-total">—</div>
+      <div class="stat-label">Total Invitados</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" id="stat-checked" style="color:var(--success)">—</div>
+      <div class="stat-label">Registrados</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" id="stat-pending" style="color:var(--muted)">—</div>
+      <div class="stat-label">Pendientes</div>
+    </div>
+  </div>
+
+  <!-- Barra de búsqueda y filtro -->
+  <div class="search-filter-box">
+    <input type="text" id="filter-input" class="search-filter-input" placeholder="🔍 Buscar por nombre, ID, empresa o cargo…" oninput="filterTable()">
+    <select id="status-filter" class="btn" onchange="filterTable()" style="padding:10px 14px;">
+      <option value="all">Todos los estados</option>
+      <option value="checked">Solo Registrados</option>
+      <option value="pending">Solo Pendientes</option>
+    </select>
+  </div>
+
+  <!-- Tabla de invitados -->
+  <div style="background:var(--surface); border-radius:var(--radius); border:1px solid var(--border); overflow-x:auto;">
+    <table class="guests-table">
+      <thead>
+        <tr>
+          <th style="width:105px;">ID</th>
+          <th>Nombres y Apellidos</th>
+          <th>Empresa</th>
+          <th>Cargo</th>
+          <th style="width:120px; text-align:center;">Rostro</th>
+          <th style="width:130px;">Estado</th>
+          <th style="width:110px;">Hora</th>
+          <th style="width:230px; text-align:center;">Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="guests-tbody">
+        <tr><td colspan="8" style="text-align:center; color:var(--muted); padding:30px;">Cargando invitados…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal para Agregar / Editar Invitado -->
+<div class="modal-backdrop" id="guest-modal">
+  <div class="modal-box">
+    <div class="modal-title"><span>➕</span><span>Registrar Nuevo Invitado</span></div>
+    <form id="guest-form" onsubmit="submitGuestForm(event)">
+      <div class="form-group">
+        <label for="m-id">Código / ID *</label>
+        <input type="text" id="m-id" required placeholder="Ej. INV-011" style="font-family:monospace; text-transform:uppercase;">
+      </div>
+      <div class="form-group">
+        <label for="m-name">Nombres y Apellidos *</label>
+        <input type="text" id="m-name" required placeholder="Ej. Juan Pérez Rodríguez">
+      </div>
+      <div class="form-group">
+        <label for="m-company">Empresa</label>
+        <input type="text" id="m-company" placeholder="Ej. Corporación Andina S.A.">
+      </div>
+      <div class="form-group">
+        <label for="m-position">Cargo</label>
+        <input type="text" id="m-position" placeholder="Ej. Gerente de Operaciones">
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn" onclick="closeAddGuestModal()">Cancelar</button>
+        <button type="submit" class="btn" style="background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600;">Guardar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal para Agregar Enlace OneDrive -->
+<div class="modal-backdrop" id="doc-modal">
+  <div class="modal-box">
+    <div class="modal-title"><span>☁️</span><span>Agregar Enlace OneDrive / SharePoint</span></div>
+    <form id="doc-form" onsubmit="submitAddDocument(event)">
+      <div class="form-group">
+        <label for="doc-name">Nombre / Alias del Documento *</label>
+        <input type="text" id="doc-name" required placeholder="Ej. Invitados Evento Principal">
+      </div>
+      <div class="form-group">
+        <label for="doc-url">Enlace Compartido de OneDrive o SharePoint *</label>
+        <input type="url" id="doc-url" required placeholder="https://1drv.ms/u/... o enlace compartido de SharePoint">
+        <span style="font-size:0.75rem; color:var(--muted); display:block; margin-top:4px;">
+          El archivo debe ser un CSV con columnas: ID, Nombres y Apellidos, Empresa, Cargo.
+        </span>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn" onclick="closeAddDocModal()">Cancelar</button>
+        <button type="submit" id="btn-submit-doc" class="btn" style="background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600;">Descargar y Activar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal para Registro y Gestión Facial de Invitado -->
+<div class="modal-backdrop" id="face-modal">
+  <div class="modal-box" style="max-width: 540px;">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
+      <div>
+        <div class="modal-title" style="margin-bottom:4px;">
+          <span>👤</span><span>Enrolamiento Facial</span>
+        </div>
+        <div style="font-size:0.88rem; color:var(--text); font-weight:600;" id="face-modal-guest-name">—</div>
+        <div style="font-size:0.8rem; color:var(--muted); font-family:monospace;" id="face-modal-guest-id">—</div>
+      </div>
+      <button class="btn" onclick="closeFaceModal()" style="padding:4px 8px; font-size:0.8rem;">✕</button>
+    </div>
+
+    <!-- Indicador de Fotos -->
+    <div style="background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:10px 14px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
+      <span style="font-size:0.85rem; font-weight:600;">Fotos registradas: <strong id="face-count-badge" style="color:var(--accent);">0 / 4</strong></span>
+      <span style="font-size:0.75rem; color:var(--muted);">Recomendado: 2 a 4 fotos</span>
+    </div>
+
+    <!-- Galería de Fotos Existentes -->
+    <div id="face-gallery-container" class="face-grid"></div>
+
+    <!-- Mensaje de estado -->
+    <div id="face-status-msg" style="display:none; padding:8px 12px; border-radius:6px; font-size:0.82rem; margin-bottom:12px;"></div>
+
+    <!-- Sección para Añadir Fotos -->
+    <div id="face-add-section" style="border-top:1px solid var(--border); padding-top:14px;">
+      <div style="display:flex; gap:8px; margin-bottom:12px;">
+        <button class="btn" id="tab-webcam-btn" onclick="switchFaceTab('webcam')" style="flex:1; font-size:0.82rem; font-weight:600; background:var(--surface2);">
+          📷 Usar Cámara Web
+        </button>
+        <button class="btn" id="tab-upload-btn" onclick="switchFaceTab('upload')" style="flex:1; font-size:0.82rem; font-weight:600;">
+          📁 Subir Archivos
+        </button>
+      </div>
+
+      <!-- Pestaña Webcam -->
+      <div id="face-tab-webcam">
+        <div class="webcam-box">
+          <video id="face-webcam" autoplay playsinline muted></video>
+          <div class="webcam-overlay">
+            <div class="webcam-target"></div>
+          </div>
+        </div>
+        <div style="text-align:center; font-size:0.78rem; color:var(--muted); margin-bottom:10px;" id="face-capture-hint">
+          Ubica tu rostro dentro del óvalo (puedes tomar fotos de frente, sonriendo o con leve giro).
+        </div>
+        <div style="display:flex; justify-content:center; gap:10px;">
+          <button type="button" class="btn" id="btn-snap-face" onclick="captureFaceSnapshot()" style="background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600; padding:10px 20px;">
+            📸 Tomar Foto
+          </button>
+        </div>
+      </div>
+
+      <!-- Pestaña Subir Archivos -->
+      <div id="face-tab-upload" style="display:none;">
+        <div style="border:2px dashed var(--border); border-radius:8px; padding:20px; text-align:center; background:var(--surface2); margin-bottom:12px;">
+          <p style="font-size:0.85rem; color:var(--muted); margin-bottom:10px;">
+            Selecciona de 1 a 4 imágenes del rostro (JPG, PNG)
+          </p>
+          <input type="file" id="face-file-input" accept="image/*" multiple onchange="onFaceFilesSelected(this.files)" style="font-size:0.85rem;">
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-actions" style="margin-top:16px;">
+      <button type="button" class="btn" onclick="closeFaceModal()" style="font-weight:600;">Listo / Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+
+<script>
+let currentDocuments = [];
+let currentActiveDocId = null;
+
+async function loadDocuments() {
+  try {
+    const res = await fetch('/api/documents');
+    const data = await res.json();
+    currentDocuments = data.documents || [];
+    currentActiveDocId = data.active_doc_id;
+
+    const selector = document.getElementById('doc-selector');
+    selector.innerHTML = '';
+
+    if (!currentDocuments.length) {
+      selector.innerHTML = '<option value="">No hay documentos configurados</option>';
+      document.getElementById('doc-meta-info').innerHTML = '<span style="color:var(--danger)">⚠️ No hay ningún enlace de OneDrive configurado.</span>';
+      document.getElementById('doc-sync-info').innerHTML = '';
+      return;
+    }
+
+    currentDocuments.forEach(doc => {
+      const opt = document.createElement('option');
+      opt.value = doc.id;
+      const count = doc.guest_count !== undefined ? `${doc.guest_count} invitados` : '—';
+      opt.textContent = `${doc.name} (${count}) ${doc.id === currentActiveDocId ? '★ Activo' : ''}`;
+      if (doc.id === currentActiveDocId) {
+        opt.selected = true;
+      }
+      selector.appendChild(opt);
+    });
+
+    const activeDoc = data.active_document || currentDocuments.find(d => d.id === currentActiveDocId) || currentDocuments[0];
+    if (activeDoc) {
+      const isOnline = data.data_source === 'onedrive';
+      const lastSyncStr = activeDoc.last_sync
+        ? new Date(activeDoc.last_sync).toLocaleString('es', { dateStyle:'short', timeStyle:'short' })
+        : 'Pendiente';
+
+      document.getElementById('doc-meta-info').innerHTML = `
+        <span>Archivo: <strong>${activeDoc.cache_file || 'en memoria'}</strong></span> • 
+        <span>Enlace: <a href="${activeDoc.url}" target="_blank" style="color:var(--accent); text-decoration:none;" title="${activeDoc.url}">Ver en OneDrive ↗</a></span>
+      `;
+      document.getElementById('doc-sync-info').innerHTML = `
+        <span style="color:${isOnline ? 'var(--success)' : 'var(--warn)'}; font-weight:600;">● ${isOnline ? 'En Línea' : 'Caché Local'}</span> • 
+        <span>Sincronizado: <strong>${lastSyncStr}</strong></span>
+      `;
+    }
+  } catch (err) {
+    console.error('Error cargando documentos:', err);
+  }
+}
+
+async function onSelectDocument(docId) {
+  if (!docId || docId === currentActiveDocId) return;
+
+  toast(`Cambiando a documento seleccionado…`, 'warn');
+  try {
+    const res = await fetch('/api/documents/select', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: docId })
+    });
+    const data = await res.json();
+    if (data.status === 'ok') {
+      toast(`✅ ${data.message}`, 'success');
+      await loadDocuments();
+      await loadGuests();
+      filterTable();
+    } else {
+      toast(`❌ Error: ${data.error || 'No se pudo cambiar'}`, 'error');
+    }
+  } catch (err) {
+    toast(`❌ Error al conectar: ${err.message}`, 'error');
+  }
+}
+
+async function syncActiveDoc() {
+  const selector = document.getElementById('doc-selector');
+  const docId = selector.value || currentActiveDocId;
+  if (!docId) return;
+
+  const btn = document.getElementById('btn-sync-doc');
+  const prevText = btn.textContent;
+  btn.textContent = '⏳ Sincronizando…';
+  btn.disabled = true;
+
+  try {
+    const res = await fetch(`/api/documents/${encodeURIComponent(docId)}/sync`, { method: 'POST' });
+    const data = await res.json();
+    if (data.status === 'ok') {
+      toast(`✅ ${data.message}`, 'success');
+    } else if (data.status === 'warning') {
+      toast(`⚠️ ${data.message}`, 'warn');
+    } else {
+      toast(`❌ Error: ${data.error || data.message || 'Fallo al sincronizar'}`, 'error');
+    }
+    await loadDocuments();
+    await loadGuests();
+    filterTable();
+  } catch (err) {
+    toast(`❌ Error de conexión: ${err.message}`, 'error');
+  } finally {
+    btn.textContent = prevText;
+    btn.disabled = false;
+  }
+}
+
+async function deleteActiveDoc() {
+  const selector = document.getElementById('doc-selector');
+  const docId = selector.value || currentActiveDocId;
+  if (!docId) return;
+
+  const doc = currentDocuments.find(d => d.id === docId);
+  const name = doc ? doc.name : docId;
+
+  if (!confirm(`¿Eliminar el documento "${name}" y su archivo en caché local?\n\nSi es el único documento, no podrá eliminarse.`)) return;
+
+  try {
+    const res = await fetch(`/api/documents/${encodeURIComponent(docId)}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (data.status === 'ok') {
+      toast(`Documento "${name}" eliminado`, 'warn');
+      await loadDocuments();
+      await loadGuests();
+      filterTable();
+    } else {
+      toast(`❌ Error: ${data.error || 'No se pudo eliminar'}`, 'error');
+    }
+  } catch (err) {
+    toast(`❌ Error al eliminar: ${err.message}`, 'error');
+  }
+}
+
+function openAddDocModal() {
+  document.getElementById('doc-form').reset();
+  document.getElementById('doc-name').value = `Invitados ${new Date().toLocaleDateString('es')}`;
+  document.getElementById('doc-modal').classList.add('open');
+}
+
+function closeAddDocModal() {
+  document.getElementById('doc-modal').classList.remove('open');
+}
+
+async function submitAddDocument(e) {
+  e.preventDefault();
+  const name = document.getElementById('doc-name').value.trim();
+  const url = document.getElementById('doc-url').value.trim();
+  const submitBtn = document.getElementById('btn-submit-doc');
+
+  if (!url) {
+    toast('Debe proporcionar un enlace válido', 'warn');
+    return;
+  }
+
+  const prevText = submitBtn.textContent;
+  submitBtn.textContent = '⏳ Descargando y validando…';
+  submitBtn.disabled = true;
+
+  try {
+    const res = await fetch('/api/documents', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, url })
+    });
+    const data = await res.json();
+    if (data.status === 'ok') {
+      toast(`✅ ${data.message}`, 'success');
+      closeAddDocModal();
+      await loadDocuments();
+      await loadGuests();
+      filterTable();
+    } else {
+      toast(`❌ Error: ${data.error || 'No se pudo procesar el enlace'}`, 'error');
+    }
+  } catch (err) {
+    toast(`❌ Error de red: ${err.message}`, 'error');
+  } finally {
+    submitBtn.textContent = prevText;
+    submitBtn.disabled = false;
+  }
+}
+
+
+async function loadPrinterStatus() {
+  try {
+    const res = await fetch('/api/printer/status');
+    const data = await res.json();
+    const dot = document.getElementById('printer-dot');
+    const info = document.getElementById('printer-info');
+
+    if (data.installed) {
+      dot.className = 'printer-dot ready';
+      info.innerHTML = `<strong>${data.name}</strong> conectada y lista (Rollo: ${data.label} - 38x90mm)`;
+    } else {
+      dot.className = 'printer-dot';
+      info.innerHTML = `<span style="color:var(--danger)">⚠️ ${data.name} no detectada</span> (${data.status_text})`;
+    }
+  } catch { /* silencioso */ }
+}
+
+async function loadGuests() {
+  const res = await fetch('/api/guests');
+  allGuests = await res.json();
+
+  const total   = allGuests.length;
+  const checked = allGuests.filter(g => g.checked_in).length;
+  document.getElementById('stat-total').textContent   = total;
+  document.getElementById('stat-checked').textContent = checked;
+  document.getElementById('stat-pending').textContent = total - checked;
+
+  renderGuestsTable(allGuests);
+}
+
+function renderGuestsTable(guests) {
+  const tbody = document.getElementById('guests-tbody');
+  if (!guests.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--muted); padding:30px;">No se encontraron invitados</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = '';
+  guests.forEach(g => {
+    const ts = g.checked_in_at
+      ? new Date(g.checked_in_at).toLocaleTimeString('es', { hour:'2-digit', minute:'2-digit' })
+      : '—';
+    const tr = document.createElement('tr');
+    tr.id = `row-${g.id}`;
+    tr.innerHTML = `
+      <td><code style="font-weight:700; color:var(--accent);">${g.id}</code></td>
+      <td><strong>${g.name}</strong></td>
+      <td style="color:var(--text)">${g.company || '—'}</td>
+      <td style="color:var(--muted); font-size:0.83rem;">${g.position || '—'}</td>
+      <td style="text-align:center;">
+        <button class="face-btn ${g.face_enrolled ? 'active' : ''}" onclick="openFaceModal('${g.id}', '${(g.name || '').replace(/'/g, "\\'")}')" title="Administrar fotos faciales">
+          ${g.face_count > 0 ? `👤 ${g.face_count}/4 fotos` : '👤 + Enrolar'}
+        </button>
+      </td>
+      <td>
+        <span class="status-dot ${g.checked_in ? 'checked' : 'pending'}"></span>
+        <span style="font-size:0.85rem; font-weight:600; color:${g.checked_in ? 'var(--success)' : 'var(--muted)'};">
+          ${g.checked_in ? 'Registrado' : 'Pendiente'}
+        </span>
+      </td>
+      <td style="font-size:0.85rem; color:var(--muted);">${ts}</td>
+      <td style="text-align:center;">
+        <div style="display:flex; gap:6px; justify-content:center;">
+          <button class="btn-action print" onclick="manualPrintGuest('${g.id}')" title="Imprimir etiqueta en Brother QL-800">
+            🖨️ Imprimir
+          </button>
+          <button class="btn-action status-toggle" onclick="toggleGuestStatus('${g.id}')" title="Cambiar estado entre Registrado y Pendiente">
+            ${g.checked_in ? '↩ Desmarcar' : '✔ Registrar'}
+          </button>
+          <button class="btn-action delete" onclick="deleteGuest('${g.id}', '${g.name}')" title="Eliminar invitado del CSV">
+            🗑️
+          </button>
+        </div>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function filterTable() {
+  const q = document.getElementById('filter-input').value.toLowerCase().trim();
+  const statusFilter = document.getElementById('status-filter').value;
+
+  const filtered = allGuests.filter(g => {
+    const matchText = (g.id || '').toLowerCase().includes(q) ||
+                      (g.name || '').toLowerCase().includes(q) ||
+                      (g.company || '').toLowerCase().includes(q) ||
+                      (g.position || '').toLowerCase().includes(q);
+    let matchStatus = true;
+    if (statusFilter === 'checked') matchStatus = g.checked_in === true;
+    if (statusFilter === 'pending') matchStatus = !g.checked_in;
+
+    return matchText && matchStatus;
+  });
+
+  renderGuestsTable(filtered);
+}
+
+/* ── Acciones Administrativas ── */
+
+async function manualPrintGuest(id) {
+  toast(`Enviando a imprimir ticket: ${id}…`, 'warn');
+  try {
+    const prRes = await fetch(`/api/print/${encodeURIComponent(id)}?force=true`, { method: 'POST' });
+    const prData = await prRes.json();
+    const ok = ['ok', 'simulated'].includes(prData.print?.status);
+    if (ok) {
+      toast(`✅ Ticket emitido y check-in confirmado para ${id}`, 'success');
+      await loadGuests();
+      filterTable();
+    } else {
+      toast(`❌ Error de impresión: ${prData.print?.message || prData.message || 'Fallo desconocido'}`, 'error');
+    }
+  } catch (err) {
+    toast(`❌ Error de red al imprimir: ${err.message}`, 'error');
+  }
+}
+
+async function toggleGuestStatus(id) {
+  try {
+    const res = await fetch(`/api/guest/${encodeURIComponent(id)}/status`, { method: 'POST' });
+    const data = await res.json();
+    if (data.status === 'ok') {
+      toast(`Estado actualizado: ${id} → ${data.guest?.checked_in ? 'Registrado' : 'Pendiente'}`, 'success');
+      await loadGuests();
+      filterTable();
+    } else {
+      toast(`Error: ${data.error || 'No se pudo actualizar'}`, 'error');
+    }
+  } catch (err) {
+    toast(`Error: ${err.message}`, 'error');
+  }
+}
+
+async function deleteGuest(id, name) {
+  if (!confirm(`¿Estás seguro de eliminar a "${name}" (${id})?\nEsta acción eliminará al invitado del archivo CSV.`)) return;
+
+  try {
+    const res = await fetch(`/api/guest/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (data.status === 'ok') {
+      toast(`Invitado ${id} eliminado`, 'warn');
+      await loadGuests();
+      filterTable();
+    } else {
+      toast(`Error: ${data.error || 'No se pudo eliminar'}`, 'error');
+    }
+  } catch (err) {
+    toast(`Error al eliminar: ${err.message}`, 'error');
+  }
+}
+
+function openAddGuestModal() {
+  document.getElementById('guest-form').reset();
+  // Sugerir ID consecutivo
+  const nextNum = allGuests.length + 1;
+  document.getElementById('m-id').value = `INV-${String(nextNum).padStart(3, '0')}`;
+  document.getElementById('guest-modal').classList.add('open');
+}
+
+function closeAddGuestModal() {
+  document.getElementById('guest-modal').classList.remove('open');
+}
+
+async function submitGuestForm(e) {
+  e.preventDefault();
+  const gid      = document.getElementById('m-id').value.trim().toUpperCase();
+  const name     = document.getElementById('m-name').value.trim();
+  const company  = document.getElementById('m-company').value.trim();
+  const position = document.getElementById('m-position').value.trim();
+
+  try {
+    const res = await fetch('/api/guest', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: gid, name, company, position })
+    });
+    const data = await res.json();
+    if (data.status === 'ok') {
+      toast(`✅ Invitado ${gid} guardado en CSV`, 'success');
+      closeAddGuestModal();
+      await loadGuests();
+      filterTable();
+    } else {
+      toast(`❌ Error: ${data.error}`, 'error');
+    }
+  } catch (err) {
+    toast(`❌ Error de red: ${err.message}`, 'error');
+  }
+}
+
+async function printSampleTest() {
+  if (!allGuests.length) {
+    toast('No hay invitados para probar', 'warn');
+    return;
+  }
+  const firstId = allGuests[0].id;
+  await manualPrintGuest(firstId);
+}
+
+
+async function confirmReset() {
+  if (!confirm('¿Resetear TODOS los check-ins de los invitados?\nEsta acción devolverá a todos los invitados a estado Pendiente.')) return;
+  await fetch('/api/reset', { method: 'POST' });
+  toast('♻️ Todos los check-ins han sido reseteados', 'warn');
+  await loadGuests();
+  filterTable();
+}
+
+function toast(msg, type='success') {
+  const c = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = msg;
+  c.appendChild(t);
+  setTimeout(() => t.remove(), 4500);
+}
+
+/* ── Gestión y Enrolamiento Facial ── */
+let currentFaceGuestId = null;
+let currentFaceGuestName = '';
+let faceWebcamStream = null;
+let currentFaceTab = 'webcam';
+let currentGuestFacesList = [];
+
+async function openFaceModal(id, name) {
+  currentFaceGuestId = id;
+  currentFaceGuestName = name;
+  document.getElementById('face-modal-guest-id').textContent = `ID: ${id}`;
+  document.getElementById('face-modal-guest-name').textContent = name;
+  
+  clearFaceStatus();
+  document.getElementById('face-modal').classList.add('open');
+  
+  await loadGuestFaces(id);
+  switchFaceTab('webcam');
+}
+
+function closeFaceModal() {
+  stopFaceWebcam();
+  document.getElementById('face-modal').classList.remove('open');
+  currentFaceGuestId = null;
+  loadGuests();
+}
+
+function clearFaceStatus() {
+  const el = document.getElementById('face-status-msg');
+  el.style.display = 'none';
+  el.className = '';
+  el.textContent = '';
+}
+
+function showFaceStatus(msg, type='info') {
+  const el = document.getElementById('face-status-msg');
+  el.style.display = 'block';
+  el.textContent = msg;
+  if (type === 'error') {
+    el.style.background = 'rgba(239, 68, 68, 0.2)';
+    el.style.color = '#fca5a5';
+    el.style.border = '1px solid rgba(239, 68, 68, 0.4)';
+  } else if (type === 'success') {
+    el.style.background = 'rgba(16, 185, 129, 0.2)';
+    el.style.color = '#6ee7b7';
+    el.style.border = '1px solid rgba(16, 185, 129, 0.4)';
+  } else {
+    el.style.background = 'rgba(79, 126, 248, 0.2)';
+    el.style.color = '#93c5fd';
+    el.style.border = '1px solid rgba(79, 126, 248, 0.4)';
+  }
+}
+
+async function loadGuestFaces(id) {
+  try {
+    const res = await fetch(`/api/guest/${encodeURIComponent(id)}/faces`);
+    const data = await res.json();
+    currentGuestFacesList = data.faces || [];
+    renderFaceGallery(currentGuestFacesList);
+  } catch (err) {
+    showFaceStatus(`Error cargando fotos: ${err.message}`, 'error');
+  }
+}
+
+function renderFaceGallery(faces) {
+  const container = document.getElementById('face-gallery-container');
+  container.innerHTML = '';
+  
+  const total = faces.length;
+  document.getElementById('face-count-badge').textContent = `${total} / 4`;
+  
+  for (let i = 0; i < 4; i++) {
+    if (i < total) {
+      const f = faces[i];
+      const card = document.createElement('div');
+      card.className = 'face-card';
+      card.innerHTML = `
+        <img src="${f.thumb_url || f.url}" alt="Foto ${i+1}">
+        <button type="button" class="del-btn" onclick="deleteFace('${f.image_id}')" title="Eliminar esta foto">✕</button>
+      `;
+      container.appendChild(card);
+    } else {
+      const empty = document.createElement('div');
+      empty.className = 'face-card face-card-empty';
+      empty.innerHTML = `<span>Espacio ${i+1}<br><small style="color:var(--muted)">Disponible</small></span>`;
+      container.appendChild(empty);
+    }
+  }
+
+  const addSec = document.getElementById('face-add-section');
+  if (total >= 4) {
+    addSec.style.display = 'none';
+    showFaceStatus('✅ Capacidad completa (4/4 fotos registradas). Para agregar una nueva, elimina alguna foto previa.', 'success');
+    stopFaceWebcam();
+  } else {
+    addSec.style.display = 'block';
+    if (total === 0) {
+      document.getElementById('face-capture-hint').textContent = 'Paso 1 de 4: Foto frontal con expresión neutra.';
+    } else if (total === 1) {
+      document.getElementById('face-capture-hint').textContent = 'Paso 2 de 4: Sonríe levemente o ajusta tu postura.';
+    } else if (total === 2) {
+      document.getElementById('face-capture-hint').textContent = 'Paso 3 de 4: Gira sutilmente la cabeza hacia la derecha.';
+    } else {
+      document.getElementById('face-capture-hint').textContent = 'Paso 4 de 4: Gira sutilmente la cabeza hacia la izquierda.';
+    }
+  }
+}
+
+function switchFaceTab(tab) {
+  currentFaceTab = tab;
+  const btnWebcam = document.getElementById('tab-webcam-btn');
+  const btnUpload = document.getElementById('tab-upload-btn');
+  const secWebcam = document.getElementById('face-tab-webcam');
+  const secUpload = document.getElementById('face-tab-upload');
+
+  if (tab === 'webcam') {
+    btnWebcam.style.background = 'var(--surface2)';
+    btnUpload.style.background = 'transparent';
+    secWebcam.style.display = 'block';
+    secUpload.style.display = 'none';
+    startFaceWebcam();
+  } else {
+    btnUpload.style.background = 'var(--surface2)';
+    btnWebcam.style.background = 'transparent';
+    secUpload.style.display = 'block';
+    secWebcam.style.display = 'none';
+    stopFaceWebcam();
+  }
+}
+
+async function startFaceWebcam() {
+  if (currentGuestFacesList.length >= 4) return;
+  const video = document.getElementById('face-webcam');
+  if (faceWebcamStream) return;
+
+  try {
+    faceWebcamStream = await navigator.mediaDevices.getUserMedia({
+      video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' },
+      audio: false
+    });
+    video.srcObject = faceWebcamStream;
+  } catch (err) {
+    showFaceStatus(`No se pudo acceder a la cámara web: ${err.message}`, 'error');
+  }
+}
+
+function stopFaceWebcam() {
+  if (faceWebcamStream) {
+    faceWebcamStream.getTracks().forEach(t => t.stop());
+    faceWebcamStream = null;
+  }
+  const video = document.getElementById('face-webcam');
+  if (video) video.srcObject = null;
+}
+
+async function captureFaceSnapshot() {
+  if (!currentFaceGuestId) return;
+  const video = document.getElementById('face-webcam');
+  if (!video.videoWidth) {
+    showFaceStatus('La cámara web aún no está lista.', 'error');
+    return;
+  }
+
+  const canvas = document.createElement('canvas');
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+
+  const btn = document.getElementById('btn-snap-face');
+  btn.disabled = true;
+  btn.textContent = '⏳ Analizando rostro con OpenCV…';
+  clearFaceStatus();
+
+  try {
+    const res = await fetch(`/api/guest/${encodeURIComponent(currentFaceGuestId)}/face`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image_base64: dataUrl })
+    });
+    const data = await res.json();
+    if (data.success) {
+      showFaceStatus(`✅ ${data.message}`, 'success');
+      await loadGuestFaces(currentFaceGuestId);
+    } else {
+      showFaceStatus(`❌ ${data.error || 'No se detectó rostro nítido'}`, 'error');
+    }
+  } catch (err) {
+    showFaceStatus(`❌ Error de comunicación: ${err.message}`, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '📸 Tomar Foto';
+  }
+}
+
+async function onFaceFilesSelected(files) {
+  if (!files || !files.length || !currentFaceGuestId) return;
+  clearFaceStatus();
+
+  for (let i = 0; i < files.length; i++) {
+    if (currentGuestFacesList.length >= 4) {
+      showFaceStatus('Límite de 4 fotos alcanzado.', 'warn');
+      break;
+    }
+    const file = files[i];
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      showFaceStatus(`Subiendo y analizando ${file.name}…`, 'info');
+      const res = await fetch(`/api/guest/${encodeURIComponent(currentFaceGuestId)}/face`, {
+        method: 'POST',
+        body: formData
+      });
+      const data = await res.json();
+      if (data.success) {
+        showFaceStatus(`✅ ${file.name}: Registrado exitosamente`, 'success');
+        await loadGuestFaces(currentFaceGuestId);
+      } else {
+        showFaceStatus(`❌ ${file.name}: ${data.error || 'No se detectó rostro'}`, 'error');
+      }
+    } catch (err) {
+      showFaceStatus(`❌ Error con ${file.name}: ${err.message}`, 'error');
+    }
+  }
+  document.getElementById('face-file-input').value = '';
+}
+
+async function deleteFace(imageId) {
+  if (!confirm('¿Eliminar esta foto de referencia facial?')) return;
+  clearFaceStatus();
+  try {
+    const res = await fetch(`/api/guest/${encodeURIComponent(currentFaceGuestId)}/face?image_id=${encodeURIComponent(imageId)}`, {
+      method: 'DELETE'
+    });
+    const data = await res.json();
+    if (data.status === 'ok') {
+      showFaceStatus('Foto eliminada.', 'info');
+      await loadGuestFaces(currentFaceGuestId);
+    } else {
+      showFaceStatus(`Error eliminando foto: ${data.error}`, 'error');
+    }
+  } catch (err) {
+    showFaceStatus(`Error de red: ${err.message}`, 'error');
+  }
+}
+
+loadDocuments();
+loadPrinterStatus();
+loadGuests();
+
+// Sincronización en vivo cada 3.5 segundos para reflejar escaneos del kiosko en tiempo real
+setInterval(async () => {
+  const guestModalOpen = document.getElementById('guest-modal').classList.contains('open');
+  const faceModalOpen  = document.getElementById('face-modal').classList.contains('open');
+  if (!guestModalOpen && !faceModalOpen) {
+    const res = await fetch('/api/guests');
+    allGuests = await res.json();
+    const total = allGuests.length;
+    const checked = allGuests.filter(g => g.checked_in).length;
+    document.getElementById('stat-total').textContent = total;
+    document.getElementById('stat-checked').textContent = checked;
+    document.getElementById('stat-pending').textContent = total - checked;
+    filterTable();
+  }
+}, 3500);
+</script>
+</body>
+</html>
