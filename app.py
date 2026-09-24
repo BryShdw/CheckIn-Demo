@@ -162,12 +162,34 @@ SETTINGS_FILE       = BASE_DIR / "settings.json"
 def load_settings() -> dict:
     if SETTINGS_FILE.exists():
         try:
-            return json.loads(SETTINGS_FILE.read_text(encoding="utf-8"))
+            data = json.loads(SETTINGS_FILE.read_text(encoding="utf-8"))
+            if "kiosk_settings" not in data:
+                data["kiosk_settings"] = {
+                    "method": "both",
+                    "mode": "manual",
+                    "face_threshold": 0.70,
+                }
+            return data
         except Exception:
             pass
     return {
         "active_doc_id": "",
-        "documents": []
+        "documents": [],
+        "kiosk_settings": {
+            "method": "both",
+            "mode": "manual",
+            "face_threshold": 0.70,
+        },
+    }
+
+
+def get_kiosk_settings() -> dict:
+    st = load_settings()
+    kiosk = st.get("kiosk_settings", {})
+    return {
+        "method": kiosk.get("method", "both"),
+        "mode": kiosk.get("mode", "manual"),
+        "face_threshold": float(kiosk.get("face_threshold", face_service.DEFAULT_COSINE_THRESHOLD)),
     }
 
 
@@ -839,10 +861,15 @@ def api_facial_match():
     if not img_b64:
         return jsonify({"error": "Se requiere imagen para el reconocimiento"}), 400
 
-    threshold = float(data.get("threshold") or face_service.DEFAULT_COSINE_THRESHOLD)
-    auto_checkin = data.get("auto_checkin", True)
-    if isinstance(auto_checkin, str):
-        auto_checkin = auto_checkin.lower() in ("true", "1", "yes")
+    kiosk_st = get_kiosk_settings()
+    threshold = float(data.get("threshold") or kiosk_st.get("face_threshold", face_service.DEFAULT_COSINE_THRESHOLD))
+
+    if "auto_checkin" in data:
+        auto_checkin = data.get("auto_checkin")
+        if isinstance(auto_checkin, str):
+            auto_checkin = auto_checkin.lower() in ("true", "1", "yes")
+    else:
+        auto_checkin = (kiosk_st.get("mode") == "auto")
 
     # 2. Inferencia con OpenCV SFace + YuNet
     match_result = face_service.match_face(img_b64, threshold=threshold)
@@ -911,6 +938,50 @@ def api_facial_match():
         "similarity": match_result["similarity"],
         "bbox": match_result.get("bbox"),
         "message": f"Rostro identificado: {guest.get('name')}",
+    })
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Endpoints de Configuración Global del Kiosko (Controlado desde /admin)
+# ─────────────────────────────────────────────────────────────────────────────
+
+@app.route("/api/kiosk-settings", methods=["GET"])
+def api_get_kiosk_settings():
+    return jsonify({
+        "status": "ok",
+        "settings": get_kiosk_settings(),
+    })
+
+
+@app.route("/api/kiosk-settings", methods=["POST"])
+def api_update_kiosk_settings():
+    data = request.get_json(silent=True) or {}
+    st = load_settings()
+    kiosk = st.get("kiosk_settings", {})
+
+    method = data.get("method")
+    if method in ("both", "facial", "qr"):
+        kiosk["method"] = method
+
+    mode = data.get("mode")
+    if mode in ("manual", "auto"):
+        kiosk["mode"] = mode
+
+    if "face_threshold" in data:
+        try:
+            th = float(data["face_threshold"])
+            if 0.50 <= th <= 0.95:
+                kiosk["face_threshold"] = round(th, 2)
+        except (ValueError, TypeError):
+            pass
+
+    st["kiosk_settings"] = kiosk
+    save_settings(st)
+    log.info(f"Configuración de Kiosko actualizada desde Admin: {kiosk}")
+    return jsonify({
+        "status": "ok",
+        "settings": kiosk,
+        "message": "Configuración del kiosko actualizada correctamente",
     })
 
 

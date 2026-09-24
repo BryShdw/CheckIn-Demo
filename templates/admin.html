@@ -55,6 +55,54 @@
       background: #0284c7;
     }
 
+    /* Estilos de pastillas de modo y configuración de kiosko */
+    .mode-pill {
+      display: inline-flex;
+      align-items: center;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 30px;
+      padding: 3px;
+      gap: 3px;
+    }
+    .mode-pill button {
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      user-select: none;
+      outline: none;
+    }
+    .mode-pill button:hover:not(.active) {
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.06);
+    }
+    .mode-pill button.active {
+      background: var(--accent);
+      color: #ffffff;
+      box-shadow: 0 2px 8px rgba(79, 126, 248, 0.4);
+      font-weight: 700;
+    }
+    #admin-mode-manual.active {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: #ffffff;
+      box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4);
+    }
+    #admin-mode-auto.active {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: #ffffff;
+      box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
+    }
+
 
     .printer-status-bar {
       background: var(--surface2); border-radius: 10px; border: 1px solid var(--border);
@@ -185,6 +233,69 @@
       <button class="btn" style="font-size:0.8rem; padding:6px 12px;" onclick="printSampleTest()">
         🖨️ Probar Impresión de Etiqueta
       </button>
+    </div>
+  </div>
+
+  <!-- Panel de Control y Configuración del Kiosko -->
+  <div class="kiosk-config-bar" style="background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px 20px; margin-bottom:16px; box-shadow:var(--shadow);">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="font-size:1.2rem;">⚙️</span>
+        <span style="font-size:1rem; font-weight:700;">Configuración de Operación del Kiosko</span>
+      </div>
+      <span style="font-size:0.8rem; color:var(--muted); background:var(--surface2); padding:4px 10px; border-radius:20px; border:1px solid var(--border);">
+        Control exclusivo desde este panel
+      </span>
+    </div>
+
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:16px; align-items:flex-start;">
+      <!-- 1. Método de Acreditación -->
+      <div style="background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:12px 14px;">
+        <label style="display:block; font-size:0.8rem; color:var(--muted); font-weight:700; text-transform:uppercase; margin-bottom:8px;">
+          1. Método de Acreditación
+        </label>
+        <div class="mode-pill" style="display:flex; width:100%; justify-content:space-between;">
+          <button type="button" id="admin-meth-both" class="active" onclick="updateKioskSetting('method', 'both')" style="flex:1;">🔄 QR + Facial</button>
+          <button type="button" id="admin-meth-facial" onclick="updateKioskSetting('method', 'facial')" style="flex:1;">👤 Solo Facial</button>
+          <button type="button" id="admin-meth-qr" onclick="updateKioskSetting('method', 'qr')" style="flex:1;">🎟 Solo QR</button>
+        </div>
+        <div style="font-size:0.75rem; color:var(--muted); margin-top:6px;" id="admin-method-desc">
+          Permite escanear código QR y reconocer rostros en simultáneo.
+        </div>
+      </div>
+
+      <!-- 2. Modo de Impresión -->
+      <div style="background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:12px 14px;">
+        <label style="display:block; font-size:0.8rem; color:var(--muted); font-weight:700; text-transform:uppercase; margin-bottom:8px;">
+          2. Modo de Impresión & Confirmación
+        </label>
+        <div class="mode-pill" style="display:flex; width:100%; justify-content:space-between;">
+          <button type="button" id="admin-mode-manual" class="active" onclick="updateKioskSetting('mode', 'manual')" style="flex:1;">✋ Manual</button>
+          <button type="button" id="admin-mode-auto" onclick="updateKioskSetting('mode', 'auto')" style="flex:1;">⚡ Automático</button>
+        </div>
+        <div style="font-size:0.75rem; color:var(--muted); margin-top:6px;" id="admin-mode-desc">
+          <strong>Manual:</strong> Muestra los datos y espera pulsar "Imprimir".<br><strong>Auto:</strong> Imprime directamente al detectar el rostro o QR.
+        </div>
+      </div>
+
+      <!-- 3. Sensibilidad y Umbral Facial -->
+      <div style="background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:12px 14px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+          <label style="font-size:0.8rem; color:var(--muted); font-weight:700; text-transform:uppercase;">
+            3. Umbral Facial (Anti-Falsos Positivos)
+          </label>
+          <span id="threshold-val-badge" style="font-size:0.85rem; font-weight:700; color:var(--accent);">0.70</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <input type="range" id="admin-threshold-slider" min="0.60" max="0.82" step="0.01" value="0.70"
+                 oninput="onThresholdSliderInput(this.value)"
+                 onchange="updateKioskSetting('face_threshold', parseFloat(this.value))"
+                 style="flex:1; accent-color:var(--accent); cursor:pointer;">
+        </div>
+        <div style="font-size:0.73rem; color:var(--muted); margin-top:6px;">
+          <strong>0.70 (Recomendado):</strong> Alta especificidad. Evita confusiones entre invitados. Si un usuario no es detectado con lentes, enrólele una foto con lentes.
+        </div>
+      </div>
     </div>
   </div>
 
@@ -342,9 +453,34 @@
     </div>
 
     <!-- Indicador de Fotos -->
-    <div style="background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:10px 14px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
+    <div style="background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:10px 14px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
       <span style="font-size:0.85rem; font-weight:600;">Fotos registradas: <strong id="face-count-badge" style="color:var(--accent);">0 / 4</strong></span>
       <span style="font-size:0.75rem; color:var(--muted);">Recomendado: 2 a 4 fotos</span>
+    </div>
+
+    <!-- Guía Visual de Enrolamiento Facial en 4 Pasos -->
+    <div style="background:rgba(79, 126, 248, 0.08); border:1px solid rgba(79, 126, 248, 0.25); border-radius:8px; padding:10px 12px; margin-bottom:12px;">
+      <div style="font-size:0.75rem; font-weight:700; color:var(--accent); text-transform:uppercase; margin-bottom:6px; display:flex; align-items:center; gap:6px;">
+        <span>💡</span><span>Guía para máxima precisión (evita confusiones y falsos rechazos):</span>
+      </div>
+      <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:6px; font-size:0.72rem; text-align:center;">
+        <div style="background:var(--surface2); padding:6px 4px; border-radius:6px; border:1px solid var(--border);">
+          <div style="font-weight:700; color:var(--text);">1. Frontal</div>
+          <div style="color:var(--muted); font-size:0.68rem;">Rostro serio y directo</div>
+        </div>
+        <div style="background:var(--surface2); padding:6px 4px; border-radius:6px; border:1px solid var(--border);">
+          <div style="font-weight:700; color:var(--text);">2. Lentes</div>
+          <div style="color:var(--muted); font-size:0.68rem;">Si usa, 1 con y 1 sin</div>
+        </div>
+        <div style="background:var(--surface2); padding:6px 4px; border-radius:6px; border:1px solid var(--border);">
+          <div style="font-weight:700; color:var(--text);">3. Sonrisa</div>
+          <div style="color:var(--muted); font-size:0.68rem;">Gesto natural del evento</div>
+        </div>
+        <div style="background:var(--surface2); padding:6px 4px; border-radius:6px; border:1px solid var(--border);">
+          <div style="font-weight:700; color:var(--text);">4. Giro 15°</div>
+          <div style="color:var(--muted); font-size:0.68rem;">Ligero ángulo lateral</div>
+        </div>
+      </div>
     </div>
 
     <!-- Galería de Fotos Existentes -->
@@ -404,6 +540,74 @@
 <script>
 let currentDocuments = [];
 let currentActiveDocId = null;
+let kioskSettings = { method: 'both', mode: 'manual', face_threshold: 0.70 };
+
+async function loadKioskSettings() {
+  try {
+    const res = await fetch('/api/kiosk-settings');
+    const data = await res.json();
+    if (data.status === 'ok') {
+      kioskSettings = data.settings;
+      renderKioskSettingsUI();
+    }
+  } catch (err) {
+    console.warn('Error cargando kiosk-settings:', err);
+  }
+}
+
+function renderKioskSettingsUI() {
+  const m = kioskSettings.method || 'both';
+  const methBoth = document.getElementById('admin-meth-both');
+  const methFacial = document.getElementById('admin-meth-facial');
+  const methQr = document.getElementById('admin-meth-qr');
+  if (methBoth) methBoth.classList.toggle('active', m === 'both');
+  if (methFacial) methFacial.classList.toggle('active', m === 'facial');
+  if (methQr) methQr.classList.toggle('active', m === 'qr');
+
+  const descEl = document.getElementById('admin-method-desc');
+  if (descEl) {
+    if (m === 'both') descEl.textContent = 'Permite escanear código QR y reconocer rostros en simultáneo.';
+    else if (m === 'facial') descEl.textContent = 'Modo exclusivo: solo reconocimiento facial (cámara activa).';
+    else if (m === 'qr') descEl.textContent = 'Modo exclusivo: solo escaneo de código QR.';
+  }
+
+  const mode = kioskSettings.mode || 'manual';
+  const modeMan = document.getElementById('admin-mode-manual');
+  const modeAuto = document.getElementById('admin-mode-auto');
+  if (modeMan) modeMan.classList.toggle('active', mode === 'manual');
+  if (modeAuto) modeAuto.classList.toggle('active', mode === 'auto');
+
+  const th = kioskSettings.face_threshold !== undefined ? kioskSettings.face_threshold : 0.70;
+  const slider = document.getElementById('admin-threshold-slider');
+  if (slider) slider.value = th;
+  const badge = document.getElementById('threshold-val-badge');
+  if (badge) badge.textContent = Number(th).toFixed(2);
+}
+
+function onThresholdSliderInput(val) {
+  const badge = document.getElementById('threshold-val-badge');
+  if (badge) badge.textContent = Number(val).toFixed(2);
+}
+
+async function updateKioskSetting(key, val) {
+  kioskSettings[key] = val;
+  renderKioskSettingsUI();
+  try {
+    const res = await fetch('/api/kiosk-settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(kioskSettings),
+    });
+    const data = await res.json();
+    if (data.status === 'ok') {
+      showToast('Configuración del kiosko actualizada', 'success');
+    } else {
+      showToast('Error guardando configuración', 'error');
+    }
+  } catch (err) {
+    showToast('Error de conexión: ' + err.message, 'error');
+  }
+}
 
 async function loadDocuments() {
   try {
@@ -1050,6 +1254,7 @@ async function deleteFace(imageId) {
   }
 }
 
+loadKioskSettings();
 loadDocuments();
 loadPrinterStatus();
 loadGuests();

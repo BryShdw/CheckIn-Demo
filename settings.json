@@ -1,4 +1,9 @@
 {
-  "active_doc_id": "",
-  "documents": []
+  "active_doc_id": null,
+  "documents": [],
+  "kiosk_settings": {
+    "method": "both",
+    "mode": "manual",
+    "face_threshold": 0.7
+  }
 }

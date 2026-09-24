@@ -37,9 +37,10 @@ EMBEDDINGS_FILE = FACE_DATA_DIR / "embeddings.json"
 YUNET_MODEL_PATH = MODELS_DIR / "face_detection_yunet.onnx"
 SFACE_MODEL_PATH = MODELS_DIR / "face_recognition_sface.onnx"
 
-# Umbral de similitud coseno por defecto (producto punto de vectores normalizados)
-# Rango típico: 0.60 a 0.75 para alta certeza.
-DEFAULT_COSINE_THRESHOLD = 0.62
+# Umbral de similitud coseno por defecto (producto punto de vectores normalizados L2)
+# 0.70 garantiza alta especificidad y elimina falsos positivos entre personas distintas.
+DEFAULT_COSINE_THRESHOLD = 0.70
+MIN_AMBIGUITY_MARGIN = 0.045     # Margen mínimo de ventaja del Top-1 sobre el Top-2
 
 _face_lock = Lock()
 _detector_instance = None
@@ -76,7 +77,7 @@ def init_face_service():
         str(YUNET_MODEL_PATH),
         "",
         (320, 320),
-        score_threshold=0.55,
+        score_threshold=0.60,
         nms_threshold=0.3,
         top_k=5,
     )
@@ -117,7 +118,6 @@ def decode_image_input(img_input) -> np.ndarray | None:
         return img_input
 
     if isinstance(img_input, str):
-        # Manejar data URL: "data:image/jpeg;base64,..."
         if "base64," in img_input:
             img_input = img_input.split("base64,")[1]
         try:
@@ -141,17 +141,33 @@ def decode_image_input(img_input) -> np.ndarray | None:
     return None
 
 
-def extract_face_feature(img_bgr: np.ndarray):
+def preprocess_contrast(img_bgr: np.ndarray) -> np.ndarray:
+    """
+    Mejora el contraste adaptativo (CLAHE) en el canal de iluminación (L de LAB)
+    para estabilizar la detección y landmarks ante sombras de lentes o luces desiguales.
+    """
+    try:
+        lab = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2LAB)
+        l, a, b = cv2.split(lab)
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+        cl = clahe.apply(l)
+        limg = cv2.merge((cl, a, b))
+        return cv2.cvtColor(limg, cv2.COLOR_LAB2BGR)
+    except Exception:
+        return img_bgr
+
+
+def extract_face_feature(img_bgr: np.ndarray, min_area: int = 3600):
     """
     Detecta el rostro principal y extrae el embedding normalizado de 128 dimensiones.
-    Retorna: (feature_normalized, aligned_face, bbox, score) o None si no se detecta rostro.
+    Retorna: (feature_normalized, aligned_face, bbox, score) o None si no se detecta rostro de calidad.
     """
     if img_bgr is None or img_bgr.size == 0:
         return None
 
     h, w = img_bgr.shape[:2]
 
-    # Re-escalar si es excesivamente grande para velocidad
+    # Re-escalar si es excesivamente grande manteniendo nitidez
     max_dim = 960
     scale = 1.0
     if max(h, w) > max_dim:
@@ -170,19 +186,21 @@ def extract_face_feature(img_bgr: np.ndarray):
     if faces is None or len(faces) == 0:
         return None
 
-    # Seleccionar la cara con mayor área o score (rostro principal)
+    # Seleccionar la cara con mayor área y score que cumpla el tamaño mínimo
     best_face = None
     best_score = -1.0
+    scaled_min_area = int(min_area * (scale * scale))
+
     for face in faces:
         score = face[14]
-        # Área del bounding box (ancho * alto)
         area = face[2] * face[3]
-        if area > 1200 and score > best_score:
+        if area >= scaled_min_area and score > best_score:
             best_score = score
             best_face = face
 
     if best_face is None:
-        best_face = faces[0]
+        # Si no supera el área mínima, no procesar para evitar ruido o rostros lejanos de fondo
+        return None
 
     # Reajustar coordenadas si se escaló la imagen
     if scale != 1.0:
@@ -191,11 +209,14 @@ def extract_face_feature(img_bgr: np.ndarray):
     else:
         actual_face = best_face
 
-    # Alinear y recortar rostro (SFace espera dimensiones estándar alineadas por landmarks)
+    # Alinear y recortar rostro con SFace
     aligned_face = _recognizer_instance.alignCrop(img_bgr, actual_face)
 
+    # Mejorar contraste en el rostro alineado (ayuda especialmente con reflejos y sombras de lentes)
+    balanced_face = preprocess_contrast(aligned_face)
+
     # Extraer feature embedding
-    feature = _recognizer_instance.feature(aligned_face)
+    feature = _recognizer_instance.feature(balanced_face)
 
     # Normalizar a vector unitario L2
     norm = np.linalg.norm(feature)
@@ -335,11 +356,16 @@ def get_enrolled_counts() -> dict[str, int]:
     return {gid: len(faces) for gid, faces in _embeddings_cache.items()}
 
 
-def match_face(img_input, threshold: float = DEFAULT_COSINE_THRESHOLD) -> dict:
+def match_face(
+    img_input,
+    threshold: float = DEFAULT_COSINE_THRESHOLD,
+    min_margin: float = MIN_AMBIGUITY_MARGIN
+) -> dict:
     """
     Busca coincidencias para el rostro presente en `img_input`.
     Calcula similitud coseno contra todos los vectores de todos los usuarios registrados.
     Para cada usuario con múltiples fotos (2-4 fotos), toma el máximo de similitud.
+    Aplica filtro de umbral estricto y margen de ambigüedad entre Top-1 y Top-2.
     """
     img_bgr = decode_image_input(img_input)
     if img_bgr is None:
@@ -360,26 +386,60 @@ def match_face(img_input, threshold: float = DEFAULT_COSINE_THRESHOLD) -> dict:
             "bbox": bbox,
         }
 
-    best_guest_id = None
-    best_similarity = -1.0
-
+    # Evaluar similitud con cada usuario registrado
+    user_scores = []
     for gid, faces in _embeddings_cache.items():
         if not faces:
             continue
-        # Calcular similitud contra cada vector del usuario
         user_sims = []
         for face_record in faces:
             stored_vec = np.array(face_record["embedding"], dtype=np.float32)
-            # Producto punto (similitud coseno ya que ambos están normalizados a norma L2 = 1)
+            # Producto punto (similitud coseno de vectores L2 normalizados)
             sim = float(np.dot(query_arr, stored_vec))
             user_sims.append(sim)
 
         max_user_sim = max(user_sims) if user_sims else -1.0
-        if max_user_sim > best_similarity:
-            best_similarity = max_user_sim
-            best_guest_id = gid
+        user_scores.append((gid, max_user_sim))
 
+    if not user_scores:
+        return {
+            "matched": False,
+            "reason": "no_candidates",
+            "message": "No hay candidatos disponibles",
+            "bbox": bbox,
+        }
+
+    # Ordenar candidatos de mayor a menor similitud
+    user_scores.sort(key=lambda x: x[1], reverse=True)
+    best_guest_id, best_similarity = user_scores[0]
+
+    # Verificar si supera el umbral estricto
     is_match = best_similarity >= threshold
+
+    # Comprobar filtro de ambigüedad si hay más de 1 usuario registrado
+    if is_match and len(user_scores) > 1:
+        second_guest_id, second_similarity = user_scores[1]
+        margin = best_similarity - second_similarity
+        # Si la diferencia entre el primer y segundo candidato es inferior a min_margin
+        # y el segundo candidato también tiene una similitud relevante
+        if margin < min_margin and second_similarity >= (threshold - 0.12):
+            log.warning(
+                "Match facial descartado por ambigüedad: Top1=%s (%.4f), Top2=%s (%.4f), Margen=%.4f < %.4f",
+                best_guest_id, best_similarity, second_guest_id, second_similarity, margin, min_margin
+            )
+            return {
+                "matched": False,
+                "reason": "ambiguous",
+                "candidate_id": best_guest_id,
+                "similarity": round(best_similarity, 4),
+                "second_candidate_id": second_guest_id,
+                "second_similarity": round(second_similarity, 4),
+                "margin": round(margin, 4),
+                "threshold": threshold,
+                "bbox": bbox,
+                "detection_score": round(det_score, 3),
+                "message": "Rostro ambiguo. Por favor mire directamente a la cámara o use su código QR.",
+            }
 
     return {
         "matched": is_match,
