@@ -167,7 +167,7 @@ def load_settings() -> dict:
                 data["kiosk_settings"] = {
                     "method": "both",
                     "mode": "manual",
-                    "face_threshold": 0.70,
+                    "face_threshold": 0.55,
                 }
             return data
         except Exception:
@@ -178,7 +178,7 @@ def load_settings() -> dict:
         "kiosk_settings": {
             "method": "both",
             "mode": "manual",
-            "face_threshold": 0.70,
+            "face_threshold": 0.55,
         },
     }
 
@@ -674,10 +674,44 @@ def build_label_image(guest: dict) -> Image.Image:
 # Impresión Directa en Windows (GDI / Brother QL-800 Spooler)
 # ─────────────────────────────────────────────────────────────────────────────
 
+def check_usb_device_present(vid: str = "04F9", name_keyword: str = "Brother") -> tuple[bool, list[dict]]:
+    """
+    Verifica mediante WMI (Win32_PnPEntity) si el hardware USB de la impresora está físicamente
+    conectado y activo en el bus PnP de Windows en este instante.
+    """
+    try:
+        import pythoncom
+        import win32com.client
+        pythoncom.CoInitialize()
+        try:
+            wmi = win32com.client.GetObject("winmgmts:")
+            query = f"SELECT DeviceID, Caption, Status, ConfigManagerErrorCode FROM Win32_PnPEntity WHERE DeviceID LIKE '%VID_{vid}%' OR Caption LIKE '%{name_keyword}%'"
+            devices = wmi.ExecQuery(query)
+            active = []
+            for d in devices:
+                err = getattr(d, "ConfigManagerErrorCode", 0)
+                status = getattr(d, "Status", "")
+                active.append({
+                    "caption": getattr(d, "Caption", ""),
+                    "device_id": getattr(d, "DeviceID", ""),
+                    "status": status,
+                    "error_code": err
+                })
+            res = (len(active) > 0), active
+            devices = None
+            wmi = None
+            return res
+        finally:
+            pythoncom.CoUninitialize()
+    except Exception as e:
+        log.warning(f"Error comprobando presencia física USB vía WMI: {e}")
+        return True, []
+
+
 def get_printer_connection_status(printer_name: str = PRINTER_NAME) -> dict:
     """
     Comprueba de forma rigurosa si la impresora Brother está instalada Y FÍSICAMENTE CONECTADA / ONLINE.
-    Verifica atributos del spooler de Windows (Offline, Error, Puertos, Jobs).
+    Verifica atributos del spooler de Windows (Offline, Error, Puertos, Jobs) y presencia en bus USB (WMI PnP).
     """
     if not PRINTER_ENABLED:
         return {
@@ -723,7 +757,21 @@ def get_printer_connection_status(printer_name: str = PRINTER_NAME) -> dict:
                 "jobs_in_queue": 0,
             }
 
-        # Abrir handle de la impresora para inspeccionar estado en tiempo real
+        # 1. Comprobación rigurosa de presencia física en bus USB (evita falsos positivos del spooler de Windows)
+        is_usb_present, _ = check_usb_device_present("04F9", "Brother")
+        if not is_usb_present:
+            return {
+                "enabled": True,
+                "installed": True,
+                "online": False,
+                "is_ready": False,
+                "name": target,
+                "status_text": "Desconectada o Apagada (Cable USB no detectado)",
+                "details": "La impresora Brother QL-800 no está conectada por cable USB o se encuentra apagada.",
+                "jobs_in_queue": 0,
+            }
+
+        # 2. Abrir handle de la impresora para inspeccionar estado del spooler
         hPrinter = win32print.OpenPrinter(target)
         try:
             p_info = win32print.GetPrinter(hPrinter, 2)
@@ -1140,6 +1188,19 @@ def api_delete_guest_face(guest_id):
         "status": "ok",
         "message": "Foto(s) eliminada(s) correctamente",
         "remaining_count": len(faces),
+    })
+
+
+@app.route("/api/faces/delete-all", methods=["POST"])
+def api_delete_all_faces():
+    """
+    Elimina todas las fotos faciales enroladas de todos los invitados.
+    """
+    res = face_service.delete_all_enrolled_faces()
+    return jsonify({
+        "status": "ok",
+        "message": f"Se han eliminado todas las fotos de enrolamiento ({res.get('deleted_count', 0)} invitados reseteados).",
+        "deleted_count": res.get("deleted_count", 0),
     })
 
 

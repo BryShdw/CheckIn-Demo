@@ -1,6 +1,15 @@
 {
-  "active_doc_id": null,
-  "documents": [],
+  "active_doc_id": "doc_20260924_151128",
+  "documents": [
+    {
+      "id": "doc_20260924_151128",
+      "name": "Invitados 24/9/2026",
+      "url": "https://dacer1984-my.sharepoint.com/:x:/g/personal/brayan_delgado_dacer_com_pe/IQDI1UYkqVHGQIQ6OABHMhIKAeZQplifertXVs7haqkEFOU?rtime=3UIP83ca30g",
+      "cache_file": "doc_20260924_151128.csv",
+      "last_sync": "2026-09-25T09:08:19.946085",
+      "guest_count": 33
+    }
+  ],
   "kiosk_settings": {
     "method": "both",
     "mode": "manual",

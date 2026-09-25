@@ -38,9 +38,9 @@ YUNET_MODEL_PATH = MODELS_DIR / "face_detection_yunet.onnx"
 SFACE_MODEL_PATH = MODELS_DIR / "face_recognition_sface.onnx"
 
 # Umbral de similitud coseno por defecto (producto punto de vectores normalizados L2)
-# 0.70 garantiza alta especificidad y elimina falsos positivos entre personas distintas.
-DEFAULT_COSINE_THRESHOLD = 0.70
-MIN_AMBIGUITY_MARGIN = 0.045     # Margen mínimo de ventaja del Top-1 sobre el Top-2
+# 0.55 ofrece el balance perfecto para reconocer rápidamente al acercarse sin falsos positivos.
+DEFAULT_COSINE_THRESHOLD = 0.55
+MIN_AMBIGUITY_MARGIN = 0.040     # Margen mínimo de ventaja del Top-1 sobre el Top-2
 
 _face_lock = Lock()
 _detector_instance = None
@@ -77,7 +77,7 @@ def init_face_service():
         str(YUNET_MODEL_PATH),
         "",
         (320, 320),
-        score_threshold=0.60,
+        score_threshold=0.45,
         nms_threshold=0.3,
         top_k=5,
     )
@@ -157,10 +157,12 @@ def preprocess_contrast(img_bgr: np.ndarray) -> np.ndarray:
         return img_bgr
 
 
-def extract_face_feature(img_bgr: np.ndarray, min_area: int = 3600):
+def extract_face_feature(img_bgr: np.ndarray, min_area: int = 2500):
     """
     Detecta el rostro principal y extrae el embedding normalizado de 128 dimensiones.
-    Retorna: (feature_normalized, aligned_face, bbox, score) o None si no se detecta rostro de calidad.
+    Prioriza el rostro en primer plano (mayor área) y utiliza la extracción nativa
+    de SFace sin distorsiones artificiales de contraste.
+    Retorna: (feature_normalized, aligned_face, bbox, score) o None si no se detecta rostro.
     """
     if img_bgr is None or img_bgr.size == 0:
         return None
@@ -186,20 +188,30 @@ def extract_face_feature(img_bgr: np.ndarray, min_area: int = 3600):
     if faces is None or len(faces) == 0:
         return None
 
-    # Seleccionar la cara con mayor área y score que cumpla el tamaño mínimo
+    # Seleccionar el rostro en primer plano: mayor área con confianza confiable (score >= 0.40)
     best_face = None
-    best_score = -1.0
+    max_area = -1.0
     scaled_min_area = int(min_area * (scale * scale))
 
     for face in faces:
         score = face[14]
         area = face[2] * face[3]
-        if area >= scaled_min_area and score > best_score:
-            best_score = score
-            best_face = face
+        if area >= scaled_min_area and score >= 0.40:
+            if area > max_area:
+                max_area = area
+                best_face = face
+
+    # Fallback: si ninguno cumplió score >= 0.40 pero hay caras con área suficiente, tomar la de mejor score
+    if best_face is None:
+        best_score = -1.0
+        for face in faces:
+            score = face[14]
+            area = face[2] * face[3]
+            if area >= scaled_min_area and score > best_score:
+                best_score = score
+                best_face = face
 
     if best_face is None:
-        # Si no supera el área mínima, no procesar para evitar ruido o rostros lejanos de fondo
         return None
 
     # Reajustar coordenadas si se escaló la imagen
@@ -209,14 +221,11 @@ def extract_face_feature(img_bgr: np.ndarray, min_area: int = 3600):
     else:
         actual_face = best_face
 
-    # Alinear y recortar rostro con SFace
+    # Alinear y recortar rostro con SFace oficial
     aligned_face = _recognizer_instance.alignCrop(img_bgr, actual_face)
 
-    # Mejorar contraste en el rostro alineado (ayuda especialmente con reflejos y sombras de lentes)
-    balanced_face = preprocess_contrast(aligned_face)
-
-    # Extraer feature embedding
-    feature = _recognizer_instance.feature(balanced_face)
+    # Extraer feature embedding directo del rostro recortado (SFace fue entrenado con caras RGB nativas)
+    feature = _recognizer_instance.feature(aligned_face)
 
     # Normalizar a vector unitario L2
     norm = np.linalg.norm(feature)
@@ -349,6 +358,31 @@ def delete_guest_face(guest_id: str, image_id: str | None = None) -> bool:
                     pass
 
     return True
+
+
+def delete_all_enrolled_faces() -> dict:
+    """
+    Elimina todas las fotos de enrolamiento y embeddings de todos los invitados registrados.
+    Limpia el archivo de embeddings en disco y vacía la carpeta de imágenes.
+    """
+    global _embeddings_cache
+    with _face_lock:
+        count = len(_embeddings_cache)
+        _embeddings_cache = {}
+        save_embeddings_to_disk()
+
+        if FACE_IMAGES_DIR.exists():
+            for item in FACE_IMAGES_DIR.iterdir():
+                try:
+                    if item.is_dir():
+                        shutil.rmtree(item, ignore_errors=True)
+                    elif item.is_file():
+                        item.unlink()
+                except Exception as e:
+                    log.warning(f"Error eliminando {item.name}: {e}")
+
+        log.info(f"Se eliminaron todas las fotos faciales de {count} invitados.")
+        return {"success": True, "deleted_count": count}
 
 
 def get_enrolled_counts() -> dict[str, int]:

@@ -16,8 +16,6 @@ __pycache__/
 *.rar
 *.7z
 guest-checkin/
-*.backup.json
-*.offline_backup.json
 
 # Datos locales de asistencia y cachés temporales
 guests_cache.csv

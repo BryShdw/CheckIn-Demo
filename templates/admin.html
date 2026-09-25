@@ -216,6 +216,7 @@
     <a href="/" class="btn">Ir al Kiosko</a>
     <button class="btn" onclick="openAddGuestModal()" style="background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600;">Nuevo Invitado</button>
     <button class="btn danger" onclick="confirmReset()">Reiniciar Asistencias</button>
+    <button class="btn danger" onclick="confirmDeleteAllFaces()" style="border-color:#fca5a5; color:#b91c1c; background:#fef2f2;" title="Eliminar las fotos y modelos faciales de todos los invitados">Eliminar Fotos Faciales</button>
   </div>
 </header>
 
@@ -286,18 +287,18 @@
       <div style="background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:12px 14px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
           <label style="font-size:0.8rem; color:var(--muted); font-weight:700; text-transform:uppercase;">
-            3. Umbral Facial (Anti-Falsos Positivos)
+            3. Umbral Facial (Sensibilidad)
           </label>
-          <span id="threshold-val-badge" style="font-size:0.85rem; font-weight:700; color:var(--accent);">0.70</span>
+          <span id="threshold-val-badge" style="font-size:0.85rem; font-weight:700; color:var(--accent);">0.55</span>
         </div>
         <div style="display:flex; align-items:center; gap:10px;">
-          <input type="range" id="admin-threshold-slider" min="0.60" max="0.82" step="0.01" value="0.70"
+          <input type="range" id="admin-threshold-slider" min="0.45" max="0.75" step="0.01" value="0.55"
                  oninput="onThresholdSliderInput(this.value)"
                  onchange="updateKioskSetting('face_threshold', parseFloat(this.value))"
                  style="flex:1; accent-color:var(--accent); cursor:pointer;">
         </div>
         <div style="font-size:0.73rem; color:var(--muted); margin-top:6px;">
-          <strong>0.70 (Recomendado):</strong> Alta especificidad. Evita confusiones entre invitados. Si un usuario no es detectado con lentes, enrólele una foto con lentes.
+          <strong>0.55 (Recomendado):</strong> Balance ideal entre reconocimiento rápido al acercarse y especificidad sin confusiones.
         </div>
       </div>
     </div>
@@ -1036,6 +1037,23 @@ async function confirmReset() {
   toast('Todos los check-ins han sido reseteados', 'warn');
   await loadGuests();
   filterTable();
+}
+
+async function confirmDeleteAllFaces() {
+  if (!confirm('¿Estás seguro de que deseas eliminar TODAS las fotos y modelos faciales de todos los invitados?\n\nEsta acción borrará todas las imágenes biométricas del servidor. Deberás enrolar las fotos de los invitados nuevamente.')) return;
+  try {
+    const res = await fetch('/api/faces/delete-all', { method: 'POST' });
+    const data = await res.json();
+    if (data.status === 'ok') {
+      toast(data.message, 'warn');
+      await loadGuests();
+      filterTable();
+    } else {
+      toast(data.error || 'No se pudieron eliminar las fotos faciales', 'error');
+    }
+  } catch (err) {
+    toast(`Error de conexión: ${err.message}`, 'error');
+  }
 }
 
 function toast(msg, type='success') {
