@@ -19,6 +19,10 @@ from app.services.guest_service import (
     delete_guest,
     reset_all_checkins,
     get_event_stats,
+    list_events,
+    create_event,
+    set_active_event,
+    delete_event,
 )
 from app.services.printer_service import (
     get_printer_connection_status,
@@ -48,6 +52,92 @@ def check_auth_and_password():
 def admin_dashboard():
     event = get_or_create_active_event()
     return render_template("admin/admin.html", current_user=current_user, active_event=event)
+
+
+# ── APIs Administrativas de Eventos ──────────────────────────────────────────
+
+@admin_bp.route("/api/events", methods=["GET"])
+def api_get_events():
+    events = list_events()
+    return jsonify({"status": "ok", "events": events})
+
+
+@admin_bp.route("/api/events", methods=["POST"])
+def api_create_event():
+    data = request.get_json() or {}
+    name = data.get("name", "").strip()
+    if not name:
+        return jsonify({"error": "El nombre del evento es requerido."}), 400
+
+    location = data.get("location", "").strip()
+    description = data.get("description", "").strip()
+    set_active = bool(data.get("set_active", False))
+    onedrive_url = data.get("onedrive_url", "").strip()
+
+    event = create_event(
+        name=name,
+        location=location,
+        description=description,
+        set_active=set_active,
+        onedrive_url=onedrive_url,
+    )
+
+    log_audit("EVENT_CREATE", user_id=current_user.id, target_type="EVENT", target_id=str(event.id),
+              details=f"Creado evento '{event.name}'", ip_address=request.remote_addr)
+
+    return jsonify({"status": "ok", "message": f"Evento '{event.name}' creado exitosamente.", "event": event.to_dict()}), 201
+
+
+@admin_bp.route("/api/events/<int:event_id>/activate", methods=["POST"])
+def api_activate_event(event_id):
+    target = set_active_event(event_id)
+    if not target:
+        return jsonify({"error": "Evento no encontrado."}), 404
+
+    log_audit("EVENT_ACTIVATE", user_id=current_user.id, target_type="EVENT", target_id=str(target.id),
+              details=f"Activado evento '{target.name}'", ip_address=request.remote_addr)
+
+    return jsonify({"status": "ok", "message": f"Evento '{target.name}' activado para acreditación.", "event": target.to_dict()})
+
+
+@admin_bp.route("/api/events/<int:event_id>", methods=["DELETE"])
+def api_delete_event(event_id):
+    if not current_user.is_admin_or_super:
+        return jsonify({"error": "Solo administradores pueden eliminar eventos."}), 403
+
+    ok, msg = delete_event(event_id)
+    if not ok:
+        return jsonify({"error": msg}), 400
+
+    log_audit("EVENT_DELETE", user_id=current_user.id, target_type="EVENT", target_id=str(event_id),
+              details=msg, ip_address=request.remote_addr)
+
+    return jsonify({"status": "ok", "message": msg})
+
+
+@admin_bp.route("/api/import/onedrive", methods=["POST"])
+def api_import_onedrive():
+    data = request.get_json() or {}
+    url = data.get("url", "").strip()
+    event_id = data.get("event_id")
+
+    event = Event.query.get(event_id) if event_id else get_or_create_active_event()
+    if not event:
+        return jsonify({"error": "Evento no encontrado."}), 404
+
+    if not url:
+        url = event.onedrive_url
+    if not url:
+        return jsonify({"error": "Ingresa un enlace de OneDrive o SharePoint válido."}), 400
+
+    ok, msg, count = sync_onedrive_link(url, event.id)
+    if not ok:
+        return jsonify({"error": msg}), 400
+
+    log_audit("IMPORT_ONEDRIVE", user_id=current_user.id, target_type="EVENT", target_id=str(event.id),
+              details=f"Sincronizados {count} invitados desde OneDrive en evento '{event.name}'", ip_address=request.remote_addr)
+
+    return jsonify({"status": "ok", "message": msg, "count": count, "event_id": event.id})
 
 
 # ── APIs Administrativas de Usuarios ─────────────────────────────────────────

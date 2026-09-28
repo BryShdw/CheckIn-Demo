@@ -1,4 +1,5 @@
 import logging
+import re
 from urllib.parse import urlparse, parse_qs, unquote
 from app.config import Config
 from app.extensions import db
@@ -10,20 +11,144 @@ from app.models.checkin import Checkin
 log = logging.getLogger(__name__)
 
 
+def slugify(text: str) -> str:
+    text = text.lower().strip()
+    text = re.sub(r'[^\w\s-]', '', text)
+    text = re.sub(r'[\s_-]+', '-', text)
+    return text.strip('-') or "evento"
+
+
 def get_or_create_active_event() -> Event:
     """Retorna el evento actualmente activo o crea el evento por defecto en MySQL."""
     event = Event.query.filter_by(is_active=True).first()
     if not event:
-        event = Event(
-            slug="evento-demo-2026",
-            name=Config.DEFAULT_EVENT_NAME,
-            description="Evento principal de demostración y acreditación",
-            is_active=True,
-        )
-        db.session.add(event)
-        db.session.commit()
-        log.info(f"Evento activo por defecto creado en MySQL: {event.name}")
+        # Si hay algún evento registrado, activar el primero
+        event = Event.query.order_by(Event.id.asc()).first()
+        if event:
+            event.is_active = True
+            db.session.commit()
+        else:
+            event = Event(
+                slug="evento-demo-2026",
+                name=Config.DEFAULT_EVENT_NAME,
+                description="Evento principal de demostración y acreditación",
+                is_active=True,
+            )
+            db.session.add(event)
+            db.session.commit()
+            log.info(f"Evento activo por defecto creado en MySQL: {event.name}")
     return event
+
+
+def list_events() -> list[dict]:
+    """Retorna la lista de todos los eventos registrados con sus métricas en MySQL."""
+    events = Event.query.order_by(Event.id.desc()).all()
+    results = []
+    for ev in events:
+        stats = get_event_stats(ev.id)
+        results.append({
+            "id": ev.id,
+            "name": ev.name,
+            "slug": ev.slug,
+            "location": ev.location or "",
+            "description": ev.description or "",
+            "is_active": ev.is_active,
+            "onedrive_url": ev.onedrive_url or "",
+            "last_sync": ev.last_sync.isoformat() if ev.last_sync else None,
+            "created_at": ev.created_at.isoformat() if ev.created_at else None,
+            "total_guests": stats["total"],
+            "checked_in": stats["checked_in"],
+            "pending": stats["pending"],
+            "percentage": stats["percentage"],
+        })
+    return results
+
+
+def create_event(name: str, location: str = "", description: str = "",
+                 set_active: bool = False, onedrive_url: str = "") -> Event:
+    """Crea un nuevo evento en MySQL."""
+    base_slug = slugify(name)
+    slug = base_slug
+    counter = 1
+    while Event.query.filter_by(slug=slug).first():
+        slug = f"{base_slug}-{counter}"
+        counter += 1
+
+    if set_active:
+        Event.query.update({Event.is_active: False})
+
+    event = Event(
+        name=name.strip(),
+        slug=slug,
+        location=location.strip() if location else "",
+        description=description.strip() if description else "",
+        is_active=set_active,
+        onedrive_url=onedrive_url.strip() if onedrive_url else None,
+    )
+    db.session.add(event)
+    db.session.commit()
+
+    if set_active:
+        get_kiosk_settings(event.id)
+        try:
+            from app.services.face_service import reload_embeddings_from_db
+            reload_embeddings_from_db(event.id)
+        except Exception:
+            pass
+
+    log.info(f"Nuevo evento creado en MySQL: '{event.name}' (ID: {event.id}, Slug: {event.slug})")
+    return event
+
+
+def set_active_event(event_id: int) -> Event | None:
+    """Marca un evento como activo y desactiva los demás."""
+    target = Event.query.get(event_id)
+    if not target:
+        return None
+
+    Event.query.update({Event.is_active: False})
+    target.is_active = True
+    db.session.commit()
+
+    get_kiosk_settings(target.id)
+
+    try:
+        from app.services.face_service import reload_embeddings_from_db
+        reload_embeddings_from_db(target.id)
+    except Exception as e:
+        log.warning(f"Error recargando embeddings al cambiar evento: {e}")
+
+    log.info(f"Evento activo cambiado a: '{target.name}' (ID: {target.id})")
+    return target
+
+
+def delete_event(event_id: int) -> tuple[bool, str]:
+    """Elimina un evento y todos sus datos en cascada."""
+    if Event.query.count() <= 1:
+        return False, "No se puede eliminar el único evento registrado en el sistema."
+
+    target = Event.query.get(event_id)
+    if not target:
+        return False, "Evento no encontrado."
+
+    was_active = target.is_active
+    target_name = target.name
+    db.session.delete(target)
+    db.session.commit()
+
+    if was_active:
+        remaining = Event.query.order_by(Event.id.desc()).first()
+        if remaining:
+            remaining.is_active = True
+            db.session.commit()
+            try:
+                from app.services.face_service import reload_embeddings_from_db
+                reload_embeddings_from_db(remaining.id)
+            except Exception:
+                pass
+
+    log.info(f"Evento eliminado: '{target_name}' (ID: {event_id})")
+    return True, f"Evento '{target_name}' eliminado correctamente."
 
 
 def get_kiosk_settings(event_id: int | None = None) -> KioskSetting:

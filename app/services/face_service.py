@@ -73,13 +73,22 @@ def init_face_service():
         reload_embeddings_from_db()
 
 
-def reload_embeddings_from_db():
-    """Recarga la caché de embeddings en memoria directamente desde la base de datos MySQL."""
+def reload_embeddings_from_db(event_id: int | None = None):
+    """Recarga la caché de embeddings en memoria directamente desde la base de datos MySQL para el evento activo."""
     global _embeddings_cache
     with _face_lock:
         _embeddings_cache = {}
         try:
-            profiles = FaceProfile.query.all()
+            if event_id is None:
+                from app.services.guest_service import get_or_create_active_event
+                ev = get_or_create_active_event()
+                event_id = ev.id if ev else None
+
+            if event_id:
+                profiles = FaceProfile.query.join(Guest).filter(Guest.event_id == event_id).all()
+            else:
+                profiles = FaceProfile.query.all()
+
             for p in profiles:
                 guest = p.guest
                 if not guest:
@@ -98,7 +107,7 @@ def reload_embeddings_from_db():
                     })
             log.info(f"Servicio facial listo. Invitados con rostros enrolados en MySQL: {len(_embeddings_cache)}")
         except Exception as e:
-            log.warning(f"No se pudieron cargar perfiles faciales desde MySQL (posible tabla no inicializada): {e}")
+            log.warning(f"No se pudieron cargar perfiles faciales desde MySQL: {e}")
 
 
 def extract_face_feature(img_bgr: np.ndarray, min_area: int = 2500):

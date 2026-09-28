@@ -215,10 +215,10 @@
   <div class="header-actions">
     <a href="/" class="btn">Ir al Kiosko</a>
     <a href="/admin/export-attendance" class="btn" style="background:#16a34a; border-color:#16a34a; color:#fff; font-weight:600;" title="Descargar lista completa en Excel con registros de asistencia">📊 Exportar Excel</a>
-    <button class="btn" onclick="openImportModal()" style="font-weight:600; background:var(--surface2);">📁 Importar Excel/CSV</button>
+    <button class="btn" onclick="openImportModal()" style="font-weight:700; background:var(--accent); border-color:var(--accent); color:#fff;">📥 Subir Invitados</button>
+    <button class="btn" onclick="openEventsModal()" style="font-weight:600; background:var(--surface2);">📅 Eventos</button>
     <button class="btn" onclick="openUsersModal()" style="font-weight:600; background:var(--surface2);">👥 Usuarios</button>
     <button class="btn" onclick="openAuditModal()" style="font-weight:600; background:var(--surface2);">📈 Analítica</button>
-    <button class="btn" onclick="openAddGuestModal()" style="background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600;">Nuevo Invitado</button>
     <button class="btn danger" onclick="confirmReset()">Reiniciar Asistencias</button>
     <button class="btn danger" onclick="confirmDeleteAllFaces()" style="border-color:#fca5a5; color:#b91c1c; background:#fef2f2;" title="Eliminar las fotos y modelos faciales de todos los invitados">Eliminar Fotos Faciales</button>
     <div style="display:flex; align-items:center; gap:8px; border-left:1px solid var(--border); padding-left:10px; margin-left:4px;">
@@ -229,6 +229,31 @@
 </header>
 
 <div class="admin-wrap" style="max-width: 1100px;">
+  <!-- Barra de Evento Activo -->
+  <div style="background:var(--surface); border:1px solid var(--border); border-left:4px solid var(--accent); border-radius:var(--radius); padding:14px 18px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; box-shadow:var(--shadow);">
+    <div style="display:flex; align-items:center; gap:12px;">
+      <span style="font-size:1.6rem;">📅</span>
+      <div>
+        <div style="font-size:0.75rem; color:var(--muted); font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">Evento Activo (Asistencias e Invitados)</div>
+        <div style="font-size:1.2rem; font-weight:800; color:var(--text);" id="display-active-event-name">{{ active_event.name }}</div>
+        <div style="font-size:0.82rem; color:var(--muted);" id="display-active-event-details">
+          <span>📍 {{ active_event.location or 'Sede central' }}</span>
+          {% if active_event.onedrive_url %}
+            <span style="margin-left:8px; color:#0078d4;">☁️ Conectado a OneDrive</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    <div style="display:flex; gap:8px; align-items:center;">
+      <button class="btn" onclick="openEventsModal()" style="font-weight:700; background:var(--surface2); border:1px solid var(--border); padding:8px 14px;">
+        🔄 Cambiar o Crear Eventos
+      </button>
+      <button class="btn" onclick="openImportModal()" style="font-weight:700; background:var(--accent); border-color:var(--accent); color:#fff; padding:8px 14px;">
+        📥 Cargar Lista a este Evento
+      </button>
+    </div>
+  </div>
+
   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
     <h1 style="font-size:1.35rem; font-weight:700;">Gestión de Invitados y Acreditación</h1>
     <span style="font-size:0.85rem; color:var(--muted);">Cinta: <strong>DK-1208 (38mm × 90.3mm)</strong></span>
@@ -545,24 +570,198 @@
   </div>
 </div>
 
-<!-- Modal para Importar Archivo Excel / CSV -->
+<!-- Modal para Gestión y Selección de Eventos -->
+<div class="modal-backdrop" id="events-modal">
+  <div class="modal-box" style="max-width: 680px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+      <div>
+        <div class="modal-title" style="margin-bottom:2px;">Gestión de Eventos</div>
+        <div style="font-size:0.8rem; color:var(--muted);">Selecciona el evento activo o crea un nuevo evento en MySQL</div>
+      </div>
+      <button class="btn" onclick="toggleNewEventForm()" style="font-size:0.8rem; padding:6px 12px; font-weight:700; background:var(--accent); color:#fff;">+ Nuevo Evento</button>
+    </div>
+
+    <!-- Formulario para crear nuevo evento -->
+    <div id="new-event-form-container" style="display:none; background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:14px; margin-bottom:16px;">
+      <div style="font-weight:700; font-size:0.9rem; margin-bottom:10px;">Crear Nuevo Evento</div>
+      <form id="create-event-form" onsubmit="submitCreateEvent(event)">
+        <div style="margin-bottom:10px;">
+          <label style="display:block; font-size:0.78rem; font-weight:600; color:var(--muted); margin-bottom:4px;">Nombre del Evento *</label>
+          <input type="text" id="new-event-name" required placeholder="Ej. Cumbre Minera 2026 / Aniversario DACER" style="width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:6px; background:var(--surface); color:var(--text);">
+        </div>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:10px;">
+          <div>
+            <label style="display:block; font-size:0.78rem; font-weight:600; color:var(--muted); margin-bottom:4px;">Lugar / Ubicación</label>
+            <input type="text" id="new-event-location" placeholder="Ej. Lima, Perú / Centro de Convenciones" style="width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:6px; background:var(--surface); color:var(--text);">
+          </div>
+          <div>
+            <label style="display:block; font-size:0.78rem; font-weight:600; color:var(--muted); margin-bottom:4px;">Enlace OneDrive (Opcional)</label>
+            <input type="url" id="new-event-onedrive" placeholder="https://1drv.ms/..." style="width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:6px; background:var(--surface); color:var(--text);">
+          </div>
+        </div>
+        <div style="margin-bottom:12px;">
+          <label style="display:block; font-size:0.78rem; font-weight:600; color:var(--muted); margin-bottom:4px;">Descripción</label>
+          <input type="text" id="new-event-desc" placeholder="Breve detalle del evento..." style="width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:6px; background:var(--surface); color:var(--text);">
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <label style="font-size:0.8rem; display:flex; align-items:center; gap:6px; cursor:pointer;">
+            <input type="checkbox" id="new-event-set-active" checked>
+            <span>Activar este evento de inmediato</span>
+          </label>
+          <div style="display:flex; gap:8px;">
+            <button type="button" class="btn" onclick="toggleNewEventForm()" style="font-size:0.8rem; padding:6px 12px;">Cancelar</button>
+            <button type="submit" class="btn" style="font-size:0.8rem; padding:6px 12px; background:var(--accent); color:#fff; font-weight:700;">Guardar Evento</button>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <!-- Lista de eventos -->
+    <div style="max-height: 320px; overflow-y: auto; border:1px solid var(--border); border-radius:8px;">
+      <table style="width:100%; border-collapse:collapse; font-size:0.85rem; text-align:left;">
+        <thead>
+          <tr style="background:var(--surface2); border-bottom:1px solid var(--border);">
+            <th style="padding:10px 12px;">Evento</th>
+            <th style="padding:10px 12px; text-align:center;">Invitados</th>
+            <th style="padding:10px 12px; text-align:center;">Asistencias</th>
+            <th style="padding:10px 12px; text-align:center;">Estado</th>
+            <th style="padding:10px 12px; text-align:right;">Acción</th>
+          </tr>
+        </thead>
+        <tbody id="events-table-body">
+          <tr><td colspan="5" style="padding:20px; text-align:center; color:var(--muted);">Cargando eventos...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="modal-actions" style="margin-top:16px; display:flex; justify-content:flex-end;">
+      <button type="button" class="btn" onclick="closeEventsModal()" style="font-weight:600;">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Unificado para Subir / Importar Invitados al Evento Activo -->
 <div class="modal-backdrop" id="import-modal">
-  <div class="modal-box" style="max-width: 480px;">
-    <div class="modal-title">Cargar Lista desde Archivo Excel o CSV</div>
-    <form id="import-file-form" onsubmit="uploadImportFile(event)">
-      <div class="form-group" style="margin-bottom:16px;">
-        <label style="display:block; font-size:0.85rem; font-weight:600; color:var(--muted); margin-bottom:6px;">Selecciona el archivo (.xlsx o .csv):</label>
-        <input type="file" id="import-file-input" accept=".xlsx, .csv" required
-               style="width:100%; padding:10px; border:1px solid var(--border); border-radius:8px; background:var(--surface2); color:var(--text);">
-        <span style="font-size:0.75rem; color:var(--muted); margin-top:4px; display:block;">
-          Formatos compatibles: Libro de Excel (.xlsx) o texto delimitado por comas (.csv). Columnas detectadas automáticamente: Nombre, Empresa, Cargo, ID, Correo, Teléfono.
-        </span>
+  <div class="modal-box" style="max-width: 560px;">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
+      <div>
+        <div class="modal-title" style="margin-bottom:2px;">Subir Lista de Invitados</div>
+        <div style="font-size:0.82rem; color:var(--muted);">
+          Destino: <strong id="modal-import-event-name" style="color:var(--text); font-weight:800;">{{ active_event.name }}</strong>
+        </div>
       </div>
-      <div class="modal-actions" style="display:flex; justify-content:flex-end; gap:8px;">
-        <button type="button" class="btn" onclick="closeImportModal()">Cancelar</button>
-        <button type="submit" class="btn" id="btn-submit-import" style="background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600;">Subir y Procesar en MySQL</button>
-      </div>
-    </form>
+      <button class="btn" onclick="closeImportModal()" style="padding:4px 8px; font-size:0.8rem;">✕</button>
+    </div>
+
+    <!-- Pestañas de Métodos de Subida -->
+    <div style="display:flex; gap:6px; margin-bottom:16px; border-bottom:1px solid var(--border); padding-bottom:8px;">
+      <button type="button" class="btn" id="tab-import-file-btn" onclick="switchImportTab('file')" style="flex:1; font-size:0.82rem; font-weight:700; background:var(--surface2);">
+        📁 Archivo Excel / CSV
+      </button>
+      <button type="button" class="btn" id="tab-import-onedrive-btn" onclick="switchImportTab('onedrive')" style="flex:1; font-size:0.82rem; font-weight:700; background:transparent;">
+        ☁️ Enlace OneDrive
+      </button>
+      <button type="button" class="btn" id="tab-import-manual-btn" onclick="switchImportTab('manual')" style="flex:1; font-size:0.82rem; font-weight:700; background:transparent;">
+        👤 Registro Individual
+      </button>
+    </div>
+
+    <!-- Pestaña 1: Archivo Excel (.xlsx) / CSV (.csv) -->
+    <div id="import-sec-file">
+      <form id="import-file-form" onsubmit="uploadImportFile(event)">
+        <div class="form-group" style="margin-bottom:16px;">
+          <label style="display:block; font-size:0.83rem; font-weight:600; color:var(--muted); margin-bottom:6px;">
+            Selecciona el archivo de Excel o CSV:
+          </label>
+          <input type="file" id="import-file-input" accept=".xlsx, .csv" required
+                 style="width:100%; padding:10px; border:1px solid var(--border); border-radius:8px; background:var(--surface2); color:var(--text);">
+          <div style="font-size:0.75rem; color:var(--muted); margin-top:8px; line-height:1.4;">
+            <strong>Formatos compatibles:</strong> Libro de Excel (.xlsx) o archivo separado por comas (.csv).<br>
+            <strong>Columnas detectadas automáticamente:</strong> Nombre, Empresa, Cargo, DNI/Código, Correo, Teléfono.
+          </div>
+        </div>
+        <div class="modal-actions" style="display:flex; justify-content:flex-end; gap:8px;">
+          <button type="button" class="btn" onclick="closeImportModal()">Cancelar</button>
+          <button type="submit" class="btn" id="btn-submit-import" style="background:var(--accent); border-color:var(--accent); color:#fff; font-weight:700;">
+            Subir y Procesar en MySQL
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Pestaña 2: Sincronización OneDrive / SharePoint -->
+    <div id="import-sec-onedrive" style="display:none;">
+      <form id="import-onedrive-form" onsubmit="submitOneDriveSync(event)">
+        <div class="form-group" style="margin-bottom:16px;">
+          <label style="display:block; font-size:0.83rem; font-weight:600; color:var(--muted); margin-bottom:6px;">
+            Enlace compartido de OneDrive o SharePoint (.xlsx o .csv):
+          </label>
+          <input type="url" id="import-onedrive-url" required placeholder="https://1drv.ms/x/s!..."
+                 value="{{ active_event.onedrive_url or '' }}"
+                 style="width:100%; padding:10px; border:1px solid var(--border); border-radius:8px; background:var(--surface2); color:var(--text);">
+          <div style="font-size:0.75rem; color:var(--muted); margin-top:8px; line-height:1.4;">
+            El sistema descargará directamente la lista en vivo desde Microsoft OneDrive / SharePoint y la guardará en MySQL para este evento.
+          </div>
+        </div>
+        <div class="modal-actions" style="display:flex; justify-content:flex-end; gap:8px;">
+          <button type="button" class="btn" onclick="closeImportModal()">Cancelar</button>
+          <button type="submit" class="btn" id="btn-submit-onedrive" style="background:#0078d4; border-color:#0078d4; color:#fff; font-weight:700;">
+            Descargar y Sincronizar
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Pestaña 3: Registro Manual Individual -->
+    <div id="import-sec-manual" style="display:none;">
+      <form id="import-manual-form" onsubmit="submitManualSingleGuest(event)">
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:10px;">
+          <div>
+            <label style="display:block; font-size:0.75rem; font-weight:600; color:var(--muted);">Código / DNI (Opcional):</label>
+            <input type="text" id="manual-guest-code" placeholder="Auto si vacío" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; background:var(--surface2); color:var(--text);">
+          </div>
+          <div>
+            <label style="display:block; font-size:0.75rem; font-weight:600; color:var(--muted);">Categoría:</label>
+            <select id="manual-guest-cat" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; background:var(--surface2); color:var(--text);">
+              <option value="GENERAL">General</option>
+              <option value="VIP">VIP</option>
+              <option value="PONENTE">Ponente</option>
+              <option value="PRENSA">Prensa</option>
+            </select>
+          </div>
+        </div>
+        <div style="margin-bottom:10px;">
+          <label style="display:block; font-size:0.75rem; font-weight:600; color:var(--muted);">Nombres y Apellidos *:</label>
+          <input type="text" id="manual-guest-name" required placeholder="Ej. Juan Pérez Ramos" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; background:var(--surface2); color:var(--text);">
+        </div>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:10px;">
+          <div>
+            <label style="display:block; font-size:0.75rem; font-weight:600; color:var(--muted);">Empresa / Organización:</label>
+            <input type="text" id="manual-guest-company" placeholder="Ej. DACER Tech" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; background:var(--surface2); color:var(--text);">
+          </div>
+          <div>
+            <label style="display:block; font-size:0.75rem; font-weight:600; color:var(--muted);">Puesto / Cargo:</label>
+            <input type="text" id="manual-guest-pos" placeholder="Ej. Gerente de TI" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; background:var(--surface2); color:var(--text);">
+          </div>
+        </div>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:16px;">
+          <div>
+            <label style="display:block; font-size:0.75rem; font-weight:600; color:var(--muted);">Correo:</label>
+            <input type="email" id="manual-guest-email" placeholder="correo@ejemplo.com" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; background:var(--surface2); color:var(--text);">
+          </div>
+          <div>
+            <label style="display:block; font-size:0.75rem; font-weight:600; color:var(--muted);">Teléfono:</label>
+            <input type="text" id="manual-guest-phone" placeholder="+51 987..." style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; background:var(--surface2); color:var(--text);">
+          </div>
+        </div>
+        <div class="modal-actions" style="display:flex; justify-content:flex-end; gap:8px;">
+          <button type="button" class="btn" onclick="closeImportModal()">Cancelar</button>
+          <button type="submit" class="btn" id="btn-submit-manual-guest" style="background:var(--accent); border-color:var(--accent); color:#fff; font-weight:700;">
+            Guardar Invitado en MySQL
+          </button>
+        </div>
+      </form>
+    </div>
   </div>
 </div>
 
@@ -1011,7 +1210,30 @@ async function loadGuests() {
 function renderGuestsTable(guests) {
   const tbody = document.getElementById('guests-tbody');
   if (!guests.length) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--muted); padding:30px;">No se encontraron invitados</td></tr>';
+    if (!allGuests.length) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="7" style="text-align:center; padding: 48px 20px;">
+            <div style="font-size: 2.2rem; margin-bottom: 8px;">📋</div>
+            <div style="font-weight: 600; font-size: 1.05rem; color: var(--text); margin-bottom: 6px;">No hay asistentes registrados en este evento</div>
+            <div style="color: var(--muted); font-size: 0.88rem; max-width: 420px; margin: 0 auto 16px auto;">
+              Puedes importar la lista desde un archivo Excel/CSV, sincronizar con un enlace de OneDrive o agregar asistentes manualmente.
+            </div>
+            <button class="btn btn-primary" onclick="openImportModal()" style="padding: 8px 18px; font-size: 0.88rem; display: inline-flex; align-items: center; gap: 8px;">
+              <span>📥</span> Subir Invitados
+            </button>
+          </td>
+        </tr>`;
+    } else {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="7" style="text-align:center; padding: 36px 20px; color: var(--muted);">
+            <div style="font-size: 1.6rem; margin-bottom: 6px;">🔍</div>
+            <div style="font-weight: 600; color: var(--text);">No se encontraron invitados con los filtros aplicados</div>
+            <div style="font-size: 0.85rem; margin-top: 4px;">Intenta cambiar el término de búsqueda o restablecer los filtros.</div>
+          </td>
+        </tr>`;
+    }
     return;
   }
 
@@ -1466,10 +1688,174 @@ function showToast(msg, type='success') {
   toast(msg, type);
 }
 
-/* ── Modal de Importación Excel/CSV ── */
+/* ── Modal de Gestión y Selección de Eventos ── */
+function openEventsModal() {
+  const modal = document.getElementById('events-modal');
+  if (modal) modal.classList.add('open');
+  loadEventsList();
+}
+
+function closeEventsModal() {
+  const modal = document.getElementById('events-modal');
+  if (modal) modal.classList.remove('open');
+  const form = document.getElementById('new-event-form-container');
+  if (form) form.style.display = 'none';
+}
+
+function toggleNewEventForm() {
+  const form = document.getElementById('new-event-form-container');
+  if (!form) return;
+  const isHidden = form.style.display === 'none' || form.style.display === '';
+  form.style.display = isHidden ? 'block' : 'none';
+  if (isHidden) {
+    document.getElementById('new-event-name').value = '';
+    document.getElementById('new-event-location').value = '';
+    document.getElementById('new-event-onedrive').value = '';
+    document.getElementById('new-event-desc').value = '';
+  }
+}
+
+async function loadEventsList() {
+  const tbody = document.getElementById('events-table-body');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="5" style="padding:20px; text-align:center; color:var(--muted);">Cargando eventos...</td></tr>';
+  try {
+    const res = await fetch('/admin/api/events');
+    const data = await res.json();
+    if (data.status === 'ok' && data.events) {
+      if (!data.events.length) {
+        tbody.innerHTML = '<tr><td colspan="5" style="padding:20px; text-align:center; color:var(--muted);">No hay eventos registrados.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = data.events.map(ev => `
+        <tr style="border-bottom:1px solid var(--border); ${ev.is_active ? 'background:rgba(220,38,38,0.03);' : ''}">
+          <td style="padding:10px 12px;">
+            <div style="font-weight:700; color:var(--text);">${escapeHtml(ev.name)}</div>
+            <div style="font-size:0.75rem; color:var(--muted);">${escapeHtml(ev.location || 'Sede central')} ${ev.onedrive_url ? '• <span style="color:#0078d4;">OneDrive</span>' : ''}</div>
+          </td>
+          <td style="padding:10px 12px; text-align:center; font-weight:700;">${ev.total_guests}</td>
+          <td style="padding:10px 12px; text-align:center;">
+            <span style="color:var(--success); font-weight:700;">${ev.checked_in}</span>
+            <span style="font-size:0.75rem; color:var(--muted);">(${ev.percentage}%)</span>
+          </td>
+          <td style="padding:10px 12px; text-align:center;">
+            ${ev.is_active
+              ? '<span style="display:inline-block; padding:2px 8px; border-radius:12px; font-size:0.72rem; font-weight:800; background:#dcfce7; color:#15803d; border:1px solid #bbf7d0;">ACTIVO</span>'
+              : '<span style="display:inline-block; padding:2px 8px; border-radius:12px; font-size:0.72rem; font-weight:600; background:var(--surface2); color:var(--muted);">Inactivo</span>'
+            }
+          </td>
+          <td style="padding:10px 12px; text-align:right;">
+            <div style="display:flex; justify-content:flex-end; gap:6px;">
+              ${!ev.is_active
+                ? `<button class="btn" style="padding:4px 8px; font-size:0.75rem; font-weight:700; background:var(--accent); color:#fff;" onclick="activateEvent(${ev.id})">Activar</button>`
+                : ''
+              }
+              <button class="btn danger" style="padding:4px 8px; font-size:0.75rem;" onclick="deleteEvent(${ev.id}, '${escapeHtml(ev.name)}')" ${data.events.length <= 1 ? 'disabled title="No puedes eliminar el único evento"' : ''}>Eliminar</button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    } else {
+      tbody.innerHTML = `<tr><td colspan="5" style="padding:20px; text-align:center; color:var(--danger);">${data.error || 'Error al cargar eventos'}</td></tr>`;
+    }
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="5" style="padding:20px; text-align:center; color:var(--danger);">Error: ${escapeHtml(err.message)}</td></tr>`;
+  }
+}
+
+async function submitCreateEvent(e) {
+  e.preventDefault();
+  const name = document.getElementById('new-event-name').value.trim();
+  const location = document.getElementById('new-event-location').value.trim();
+  const onedrive_url = document.getElementById('new-event-onedrive').value.trim();
+  const description = document.getElementById('new-event-desc').value.trim();
+  const set_active = document.getElementById('new-event-set-active').checked;
+
+  if (!name) {
+    showToast('Ingresa el nombre del evento', 'warn');
+    return;
+  }
+
+  try {
+    const res = await fetch('/admin/api/events', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, location, onedrive_url, description, set_active })
+    });
+    const data = await res.json();
+    if (res.ok && data.status === 'ok') {
+      showToast(data.message || 'Evento creado exitosamente', 'success');
+      toggleNewEventForm();
+      loadEventsList();
+      if (set_active && data.event) {
+        updateActiveEventUI(data.event);
+        await loadGuests();
+        await loadKioskSettings();
+      }
+    } else {
+      showToast(data.error || 'Error al crear evento', 'error');
+    }
+  } catch (err) {
+    showToast('Error de red: ' + err.message, 'error');
+  }
+}
+
+async function activateEvent(eventId) {
+  try {
+    const res = await fetch(`/admin/api/events/${eventId}/activate`, { method: 'POST' });
+    const data = await res.json();
+    if (res.ok && data.status === 'ok') {
+      showToast(data.message || 'Evento activado', 'success');
+      loadEventsList();
+      if (data.event) {
+        updateActiveEventUI(data.event);
+        await loadGuests();
+        await loadKioskSettings();
+      }
+    } else {
+      showToast(data.error || 'Error al activar evento', 'error');
+    }
+  } catch (err) {
+    showToast('Error de conexión: ' + err.message, 'error');
+  }
+}
+
+async function deleteEvent(eventId, name) {
+  if (!confirm(`¿Eliminar el evento "${name}"? Se borrarán sus listas y asistencias en MySQL.`)) return;
+  try {
+    const res = await fetch(`/admin/api/events/${eventId}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (res.ok && data.status === 'ok') {
+      showToast(data.message || 'Evento eliminado', 'info');
+      loadEventsList();
+      await loadGuests();
+    } else {
+      showToast(data.error || 'Error al eliminar evento', 'error');
+    }
+  } catch (err) {
+    showToast('Error de conexión: ' + err.message, 'error');
+  }
+}
+
+function updateActiveEventUI(eventObj) {
+  const nameEl = document.getElementById('display-active-event-name');
+  if (nameEl) nameEl.textContent = eventObj.name;
+  const detEl = document.getElementById('display-active-event-details');
+  if (detEl) {
+    detEl.innerHTML = `<span>📍 ${escapeHtml(eventObj.location || 'Sede central')}</span>` +
+      (eventObj.onedrive_url ? ' <span style="margin-left:8px; color:#0078d4;">☁️ Conectado a OneDrive</span>' : '');
+  }
+  const modalName = document.getElementById('modal-import-event-name');
+  if (modalName) modalName.textContent = eventObj.name;
+  const odInput = document.getElementById('import-onedrive-url');
+  if (odInput) odInput.value = eventObj.onedrive_url || '';
+}
+
+/* ── Modal Unificado de Importación y Métodos de Subida ── */
 function openImportModal() {
   const modal = document.getElementById('import-modal');
   if (modal) modal.classList.add('open');
+  switchImportTab('file');
 }
 
 function closeImportModal() {
@@ -1477,6 +1863,23 @@ function closeImportModal() {
   if (modal) modal.classList.remove('open');
   const input = document.getElementById('import-file-input');
   if (input) input.value = '';
+}
+
+function switchImportTab(tab) {
+  const secFile = document.getElementById('import-sec-file');
+  const secOD = document.getElementById('import-sec-onedrive');
+  const secManual = document.getElementById('import-sec-manual');
+  const btnFile = document.getElementById('tab-import-file-btn');
+  const btnOD = document.getElementById('tab-import-onedrive-btn');
+  const btnManual = document.getElementById('tab-import-manual-btn');
+
+  if (secFile) secFile.style.display = tab === 'file' ? 'block' : 'none';
+  if (secOD) secOD.style.display = tab === 'onedrive' ? 'block' : 'none';
+  if (secManual) secManual.style.display = tab === 'manual' ? 'block' : 'none';
+
+  if (btnFile) btnFile.style.background = tab === 'file' ? 'var(--surface2)' : 'transparent';
+  if (btnOD) btnOD.style.background = tab === 'onedrive' ? 'var(--surface2)' : 'transparent';
+  if (btnManual) btnManual.style.background = tab === 'manual' ? 'var(--surface2)' : 'transparent';
 }
 
 async function uploadImportFile(e) {
@@ -1513,6 +1916,76 @@ async function uploadImportFile(e) {
   } finally {
     submitBtn.disabled = false;
     submitBtn.textContent = prevText;
+  }
+}
+
+async function submitOneDriveSync(e) {
+  e.preventDefault();
+  const urlInput = document.getElementById('import-onedrive-url');
+  const submitBtn = document.getElementById('btn-submit-onedrive');
+  const url = urlInput.value.trim();
+  if (!url) {
+    showToast('Ingresa un enlace de OneDrive o SharePoint', 'warn');
+    return;
+  }
+
+  const prevText = submitBtn.textContent;
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Descargando desde OneDrive...';
+
+  try {
+    const res = await fetch('/admin/api/import/onedrive', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url })
+    });
+    const data = await res.json();
+    if (res.ok && data.status === 'ok') {
+      showToast(data.message || 'Lista sincronizada con éxito desde OneDrive', 'success');
+      closeImportModal();
+      await loadGuests();
+    } else {
+      showToast(data.error || 'Error al sincronizar con OneDrive', 'error');
+    }
+  } catch (err) {
+    showToast('Error al conectar con OneDrive: ' + err.message, 'error');
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = prevText;
+  }
+}
+
+async function submitManualSingleGuest(e) {
+  e.preventDefault();
+  const guest_code = document.getElementById('manual-guest-code').value.trim();
+  const name = document.getElementById('manual-guest-name').value.trim();
+  const company = document.getElementById('manual-guest-company').value.trim();
+  const position = document.getElementById('manual-guest-pos').value.trim();
+  const email = document.getElementById('manual-guest-email').value.trim();
+  const phone = document.getElementById('manual-guest-phone').value.trim();
+  const category = document.getElementById('manual-guest-cat').value;
+
+  if (!name) {
+    showToast('El nombre es obligatorio', 'warn');
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/guests', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: guest_code, name, company, position, email, phone, category })
+    });
+    const data = await res.json();
+    if (res.ok && data.status === 'ok') {
+      showToast(`Invitado ${name} guardado en MySQL`, 'success');
+      closeImportModal();
+      await loadGuests();
+    } else {
+      showToast(data.error || 'Error al registrar invitado', 'error');
+    }
+  } catch (err) {
+    showToast('Error de conexión: ' + err.message, 'error');
   }
 }
 

@@ -5,7 +5,6 @@ from app.extensions import db, login_manager, csrf, limiter
 from app.blueprints import auth_bp, kiosk_bp, admin_bp, api_bp
 from app.services.auth_service import ensure_default_admin
 from app.services.guest_service import get_or_create_active_event
-from app.services.import_service import migrate_legacy_data
 from app.services.face_service import init_face_service
 
 # Configuración de logging corporativo
@@ -53,10 +52,7 @@ def create_app(config_class=Config) -> Flask:
             # 3. Asegurar Evento Activo por defecto
             get_or_create_active_event()
 
-            # 4. Migrar datos previos desde archivos planos si existen
-            migrate_legacy_data()
-
-            # 5. Inicializar modelos de Visión por Computadora y precargar embeddings
+            # 4. Inicializar modelos de Visión por Computadora y precargar embeddings
             init_face_service()
 
         except Exception as e:

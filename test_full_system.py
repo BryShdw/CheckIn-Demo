@@ -215,13 +215,70 @@ def run_tests():
         assert dup_data["already_checked_in"] is True
         print(f"[OK] Detección de duplicado correcta (already_checked_in=True).")
 
-    # Restablecer contraseña de Admin a 000000 para entrega al usuario
+    # 11. Probar APIs de Gestión Multi-Evento
+    # Crear un nuevo evento
+    res = client.post("/admin/api/events", json={
+        "name": "Cumbre Tecnológica 2026",
+        "description": "Evento de prueba automatizado",
+        "kiosk_welcome_text": "Bienvenidos a la Cumbre Tecnológica 2026"
+    })
+    assert res.status_code in (200, 201)
+    new_event = res.get_json()["event"]
+    new_event_id = new_event["id"]
+    print(f"[OK] Evento creado: '{new_event['name']}' (ID: {new_event_id}).")
+
+    # Activar el nuevo evento
+    res = client.post(f"/admin/api/events/{new_event_id}/activate")
+    assert res.status_code == 200
+    assert res.get_json()["status"] == "ok"
+    print(f"[OK] Evento '{new_event_id}' activado como evento activo principal.")
+
+    # 12. Probar Registro Manual Individual de Invitado
+    res = client.post("/api/guest", json={
+        "id": "ASIST-001",
+        "name": "Dra. Elena Ramos",
+        "company": "BioTech Innovations",
+        "position": "Directora de I+D",
+        "email": "elena.ramos@biotech.com"
+    })
+    assert res.status_code in (200, 201)
+    print("[OK] Invitado ASIST-001 registrado individualmente vía /api/guest.")
+
+    # 13. Probar Alternancia de Asistencia Manual /api/guest/<id>/status (Corrección de Error 405)
+    # Marcar como registrado
+    res = client.post("/api/guest/ASIST-001/status", json={"checked_in": True})
+    assert res.status_code == 200, f"Error esperado 200 pero recibido {res.status_code}"
+    status_resp = res.get_json()
+    assert status_resp["checked_in"] is True
+    print("[OK] POST /api/guest/ASIST-001/status marcó asistencia exitosamente (HTTP 200, no 405).")
+
+    # Desmarcar como pendiente
+    res = client.post("/api/guest/ASIST-001/status", json={"checked_in": False})
+    assert res.status_code == 200
+    status_resp = res.get_json()
+    assert status_resp["checked_in"] is False
+    print("[OK] POST /api/guest/ASIST-001/status desmarcó asistencia exitosamente (HTTP 200, no 405).")
+
+    # 14. Limpieza final: Eliminar evento de prueba y dejar la BD completamente en 0 invitados
     with app.app_context():
+        Checkin.query.delete()
+        Guest.query.delete()
+        
+        # Conservar el primer evento base y eliminar los de prueba
+        first_event = Event.query.order_by(Event.id.asc()).first()
+        if first_event:
+            Event.query.filter(Event.id != first_event.id).delete()
+            first_event.is_active = True
+            
         admin = User.query.filter_by(username="Admin").first()
         admin.set_password("000000")
         admin.must_change_password = True
         db.session.commit()
-        print("[OK] Credencial inicial de Admin dejada lista para el usuario: 'Admin' / '000000' (must_change_password=True).")
+        
+        total_guests_now = Guest.query.count()
+        assert total_guests_now == 0, f"Se esperaban 0 invitados tras la limpieza, pero hay {total_guests_now}"
+        print(f"[OK] Base de datos limpia con {total_guests_now} invitados. Sistema listo en estado inicial.")
+        print("[OK] Credencial inicial de Admin: 'Admin' / '000000' (must_change_password=True).")
 
     print("\n============================================================")
     print("¡TODAS LAS PRUEBAS DE INTEGRACIÓN Y SEGURIDAD PASARON (10/10)!")

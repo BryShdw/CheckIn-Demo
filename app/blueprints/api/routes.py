@@ -9,6 +9,7 @@ from flask_login import current_user
 from app.config import Config
 from app.extensions import db, csrf
 from app.models.guest import Guest
+from app.models.checkin import Checkin
 from app.services.guest_service import (
     get_or_create_active_event,
     get_kiosk_settings,
@@ -141,6 +142,58 @@ def api_delete_guest(guest_id):
               details=f"Invitado eliminado: {name}", ip_address=request.remote_addr)
 
     return jsonify({"status": "ok", "message": f"Invitado '{name}' eliminado de la base de datos."})
+
+
+@api_bp.route("/guest/<path:guest_id>/status", methods=["POST"])
+def api_toggle_guest_status(guest_id):
+    """
+    Alterna el estado de asistencia de un invitado (Registrado <-> Pendiente)
+    manualmente desde el panel de administración.
+    """
+    event = get_or_create_active_event()
+    guest = find_guest(guest_id, event.id)
+    if not guest:
+        return jsonify({"error": f"Invitado con ID '{guest_id}' no encontrado."}), 404
+
+    user_id = current_user.id if current_user.is_authenticated else None
+
+    if guest.is_checked_in:
+        Checkin.query.filter_by(guest_id=guest.id, event_id=event.id).delete()
+        db.session.commit()
+        log_audit(
+            "CHECKIN_CANCEL",
+            user_id=user_id,
+            target_type="GUEST",
+            target_id=guest.guest_code,
+            details=f"Asistencia revertida a pendiente para: {guest.full_name}",
+            ip_address=request.remote_addr,
+        )
+    else:
+        checkin = Checkin(
+            event_id=event.id,
+            guest_id=guest.id,
+            method="MANUAL",
+            verified_by_user_id=user_id,
+            ip_address=request.remote_addr,
+            printed_success=False,
+        )
+        db.session.add(checkin)
+        db.session.commit()
+        log_audit(
+            "CHECKIN_MANUAL",
+            user_id=user_id,
+            target_type="GUEST",
+            target_id=guest.guest_code,
+            details=f"Asistencia confirmada manualmente para: {guest.full_name}",
+            ip_address=request.remote_addr,
+        )
+
+    return jsonify({
+        "status": "ok",
+        "message": f"Estado de {guest.full_name} actualizado a {'Registrado' if guest.is_checked_in else 'Pendiente'}.",
+        "checked_in": guest.is_checked_in,
+        "guest": guest.to_dict(),
+    })
 
 
 # ── Check-In y Acreditación ─────────────────────────────────────────────────
