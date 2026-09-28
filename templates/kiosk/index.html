@@ -1,0 +1,1382 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kiosko de Registro y Acreditación — DACER</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <style>
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    /* ── Pantalla de Bienvenida (Flat & Clean Light) ── */
+    .welcome-container {
+      position: fixed;
+      inset: 0;
+      background: #f8fafc;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      z-index: 100;
+    }
+
+    .welcome-card {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 48px 40px;
+      max-width: 520px;
+      width: 100%;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
+    }
+
+    .welcome-logo {
+      height: 44px;
+      max-width: 220px;
+      object-fit: contain;
+      margin-bottom: 22px;
+    }
+
+    .welcome-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      background: var(--accent-light);
+      border: 1px solid var(--accent-border);
+      color: var(--accent);
+      padding: 5px 14px;
+      border-radius: 20px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+
+    .welcome-title {
+      font-size: 2.2rem;
+      font-weight: 800;
+      color: var(--text);
+      margin: 0 0 12px 0;
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+    }
+
+    .welcome-subtitle {
+      font-size: 1.05rem;
+      color: var(--silver);
+      line-height: 1.55;
+      margin: 0 0 32px 0;
+      max-width: 440px;
+    }
+
+    .btn-welcome-cta {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      max-width: 440px;
+      padding: 16px 24px;
+      border: none;
+      border-radius: 10px;
+      background: var(--accent);
+      color: #ffffff;
+      font-size: 1.1rem;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(220, 38, 38, 0.2);
+      transition: background 0.15s ease, transform 0.15s ease;
+      user-select: none;
+      font-family: inherit;
+    }
+
+    .btn-welcome-cta:hover {
+      background: var(--accent-hover);
+      transform: translateY(-1px);
+    }
+
+    .btn-welcome-cta:active {
+      transform: translateY(0);
+    }
+
+    .welcome-footer-hint {
+      margin-top: 22px;
+      font-size: 0.85rem;
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    /* ── Vista del Kiosko de Acreditación ── */
+    #kiosk-view {
+      display: none;
+      height: 100vh;
+      flex-direction: column;
+      background: var(--bg);
+    }
+
+    .btn-flat-back {
+      font-size: 0.85rem;
+      padding: 7px 14px;
+      background: #ffffff;
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      color: var(--silver);
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.15s, color 0.15s;
+    }
+    .btn-flat-back:hover {
+      background: var(--surface2);
+      color: var(--text);
+    }
+
+    .kiosk-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      height: calc(100vh - 58px);
+      gap: 0;
+    }
+
+    /* ── Adaptación Ergonómica para Tótem Vertical (Portrait / Kiosko) ── */
+    @media (orientation: portrait), (max-aspect-ratio: 1/1), (max-width: 1024px) {
+      html, body {
+        overflow: hidden;
+      }
+
+      .kiosk-layout {
+        grid-template-columns: 1fr;
+        grid-template-rows: 52vh 1fr;
+        height: calc(100vh - 58px);
+      }
+
+      .kiosk-camera {
+        border-right: none !important;
+        border-bottom: 1px solid var(--border) !important;
+        height: 100% !important;
+        min-height: 0;
+      }
+
+      .kiosk-panel {
+        height: 100% !important;
+        min-height: 0;
+        padding: 24px 20px !important;
+        justify-content: flex-start !important;
+        overflow-y: auto !important;
+      }
+
+      .scan-guide {
+        width: 240px !important;
+        height: 240px !important;
+        transform: translate(-50%, -50%) !important;
+      }
+
+      .camera-instruction {
+        bottom: 16px !important;
+      }
+
+      .instruction-pill {
+        font-size: 0.88rem !important;
+        padding: 8px 16px !important;
+      }
+
+      .welcome-card {
+        max-width: 600px !important;
+        padding: 52px 36px !important;
+      }
+
+      .welcome-title {
+        font-size: 2.2rem !important;
+      }
+
+      .btn-welcome-cta {
+        padding: 18px 28px !important;
+        font-size: 1.15rem !important;
+      }
+
+      .idle-state {
+        margin-top: auto;
+        margin-bottom: auto;
+        padding: 10px 0;
+      }
+
+      .idle-icon-wrap {
+        width: 64px !important;
+        height: 64px !important;
+        margin-bottom: 14px !important;
+      }
+
+      .idle-icon-wrap svg {
+        width: 34px !important;
+        height: 34px !important;
+      }
+
+      .idle-title {
+        font-size: 1.5rem !important;
+        margin-bottom: 8px !important;
+      }
+
+      .idle-sub {
+        font-size: 0.95rem !important;
+        margin-bottom: 16px !important;
+        max-width: 400px !important;
+      }
+
+      .guest-result {
+        margin-top: auto;
+        margin-bottom: auto;
+        max-width: 520px !important;
+      }
+
+      .guest-body-card {
+        padding: 20px !important;
+      }
+
+      .g-name-large {
+        font-size: 1.5rem !important;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .kiosk-layout {
+        grid-template-rows: 45vh 1fr;
+      }
+      .scan-guide {
+        width: 190px !important;
+        height: 190px !important;
+      }
+    }
+
+    /* Lado izquierdo: cámara */
+    .kiosk-camera {
+      position: relative;
+      background: #0f172a;
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--border);
+    }
+
+    #video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    #overlay-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      object-fit: cover;
+    }
+
+    .camera-instruction {
+      position: absolute;
+      bottom: 18px; left: 0; right: 0;
+      display: flex;
+      justify-content: center;
+      pointer-events: none;
+    }
+
+    .instruction-pill {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(8px);
+      border: 1px solid var(--border);
+      border-radius: 30px;
+      padding: 9px 18px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text);
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.1);
+    }
+
+    /* Cuadro de guía centrado */
+    .scan-guide {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -60%);
+      width: 220px; height: 220px;
+      pointer-events: none;
+    }
+
+    .scan-guide::before,
+    .scan-guide::after,
+    .scan-guide-inner::before,
+    .scan-guide-inner::after {
+      content: '';
+      position: absolute;
+      width: 28px; height: 28px;
+      border-color: var(--accent);
+      border-style: solid;
+    }
+
+    .scan-guide::before  { top: 0; left: 0; border-width: 3px 0 0 3px; border-radius: 4px 0 0 0; }
+    .scan-guide::after   { top: 0; right: 0; border-width: 3px 3px 0 0; border-radius: 0 4px 0 0; }
+    .scan-guide-inner::before { bottom: 0; left: 0; border-width: 0 0 3px 3px; border-radius: 0 0 0 4px; }
+    .scan-guide-inner::after  { bottom: 0; right: 0; border-width: 0 3px 3px 0; border-radius: 0 0 4px 0; }
+
+    .scan-guide.detected::before,
+    .scan-guide.detected::after,
+    .scan-guide.detected .scan-guide-inner::before,
+    .scan-guide.detected .scan-guide-inner::after {
+      border-color: var(--success);
+      transition: border-color 0.2s;
+    }
+
+    /* Lado derecho: panel de estado */
+    .kiosk-panel {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 36px 30px;
+      background: #ffffff;
+      transition: background 0.2s;
+      overflow-y: auto;
+    }
+
+    .kiosk-panel.state-idle       { background: #ffffff; }
+    .kiosk-panel.state-new        { background: #f8fafc; }
+    .kiosk-panel.state-duplicate  { background: #f8fafc; }
+    .kiosk-panel.state-error      { background: #f8fafc; }
+
+    /* Estado idle */
+    .idle-state {
+      text-align: center;
+      max-width: 440px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .idle-icon-wrap {
+      width: 76px;
+      height: 76px;
+      border-radius: 16px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+      color: var(--accent);
+    }
+
+    .idle-title {
+      font-size: 1.65rem;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 10px;
+      letter-spacing: -0.01em;
+    }
+
+    .idle-sub {
+      font-size: 0.95rem;
+      color: var(--silver);
+      line-height: 1.55;
+      margin-bottom: 22px;
+    }
+
+    .idle-pill-hint {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 5px 14px;
+      font-size: 0.8rem;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    /* Tarjeta del invitado */
+    .guest-result {
+      width: 100%;
+      max-width: 480px;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      animation: pop-in 0.25s ease-out;
+    }
+    .guest-result.visible { display: flex; }
+
+    @keyframes pop-in {
+      from { transform: scale(0.96); opacity: 0; }
+      to   { transform: scale(1); opacity: 1; }
+    }
+
+    .status-banner {
+      width: 100%;
+      border-radius: 10px 10px 0 0;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 1rem;
+      font-weight: 700;
+    }
+
+    .status-banner.new       { background: #f0fdf4; border: 1px solid #bbf7d0; border-bottom: none; color: #166534; }
+    .status-banner.duplicate { background: #fffbeb; border: 1px solid #fde68a; border-bottom: none; color: #92400e; }
+    .status-banner.error     { background: #fef2f2; border: 1px solid #fecaca; border-bottom: none; color: #991b1b; }
+    .status-banner.pending   { background: #eff6ff; border: 1px solid #bfdbfe; border-bottom: none; color: #1e40af; }
+
+    .status-banner .banner-icon { display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .status-banner .banner-text { line-height: 1.3; }
+    .status-banner .banner-sub  { font-size: 0.82rem; font-weight: 500; opacity: 0.9; margin-top: 2px; }
+
+    .guest-body-card {
+      width: 100%;
+      background: #ffffff;
+      border-radius: 0 0 10px 10px;
+      border: 1px solid var(--border);
+      border-top: none;
+      padding: 24px;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);
+    }
+
+    .status-banner.new       + .guest-body-card { border-color: #bbf7d0; }
+    .status-banner.duplicate + .guest-body-card { border-color: #fde68a; }
+    .status-banner.error     + .guest-body-card { border-color: #fecaca; }
+    .status-banner.pending   + .guest-body-card { border-color: #bfdbfe; }
+
+    .g-name-large {
+      font-size: 1.65rem;
+      font-weight: 800;
+      line-height: 1.25;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+
+    .g-code-badge {
+      display: inline-block;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 3px 8px;
+      font-size: 0.85rem;
+      font-family: monospace;
+      font-weight: 600;
+      color: var(--silver);
+      margin-bottom: 18px;
+    }
+
+    .g-details {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      border-top: 1px solid var(--border);
+      padding-top: 16px;
+    }
+
+    .g-detail-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      font-size: 0.95rem;
+    }
+
+    .g-detail-row .d-label {
+      color: var(--muted);
+      font-size: 0.76rem;
+      text-transform: uppercase;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+    .g-detail-row .d-value {
+      font-weight: 600;
+      color: var(--text);
+      text-align: right;
+    }
+
+    /* Barra de auto-reset */
+    .reset-bar-wrap {
+      width: 100%;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      margin-top: 20px;
+      overflow: hidden;
+    }
+
+    .reset-bar {
+      height: 100%;
+      background: var(--accent);
+      width: 100%;
+      transform-origin: left;
+      transform: scaleX(1);
+    }
+
+    .reset-hint {
+      margin-top: 8px;
+      font-size: 0.8rem;
+      color: var(--muted);
+      text-align: center;
+      font-weight: 500;
+    }
+
+    .btn-print-kiosk {
+      width: 100%;
+      margin-top: 16px;
+      padding: 13px 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.98rem;
+      font-weight: 700;
+      cursor: pointer;
+      background: var(--accent);
+      color: #fff;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: background 0.15s ease;
+      font-family: inherit;
+    }
+    .btn-print-kiosk:hover:not(:disabled) {
+      background: var(--accent-hover);
+    }
+    .btn-print-kiosk:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .btn-print-kiosk.show { display: flex; }
+
+    #process-canvas { display: none; }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<!-- VISTA 1: Pantalla de Bienvenida (Flat & Clean Light)                        -->
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<div id="welcome-view" class="welcome-container">
+  <div class="welcome-card">
+    <img src="/static/logo-dark.png" alt="DACER" class="welcome-logo">
+    <div class="welcome-badge">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+      <span>Acreditación y Registro</span>
+    </div>
+    <h1 class="welcome-title">Control de Asistencia</h1>
+    <p class="welcome-subtitle">
+      Confirme su asistencia y obtenga su credencial oficial de acceso de forma rápida e instantánea.
+    </p>
+
+    <button id="btn-start-checkin" class="btn-welcome-cta" onclick="startCheckinSession()">
+      <span>Iniciar Acreditación</span>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+    </button>
+
+    <div class="welcome-footer-hint" id="welcome-footer-hint">
+      <span id="welcome-hint-text">Ubíquese frente a la cámara o presente su código QR</span>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<!-- VISTA 2: Kiosko de Acreditación (Cámara y Verificación)                   -->
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<div id="kiosk-view">
+
+  <!-- Header Limpio: Logo DACER y botón para volver al inicio -->
+  <header style="justify-content:space-between; padding:12px 24px; background:#ffffff; border-bottom:1px solid var(--border);">
+    <div class="logo" style="display:flex; align-items:center; gap:12px;">
+      <img src="/static/logo-dark.png" alt="DACER" style="height:32px; object-fit:contain;">
+      <span style="font-weight:700; font-size:1.05rem; letter-spacing:-0.01em; color:var(--text);">Acreditación & Registro</span>
+    </div>
+    <div class="header-actions">
+      <button class="btn-flat-back" onclick="returnToWelcome()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        <span>Volver al Inicio</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Contenido principal -->
+  <div class="kiosk-layout">
+
+    <!-- LADO IZQUIERDO: Cámara -->
+    <div class="kiosk-camera">
+      <video id="video" autoplay muted playsinline></video>
+      <canvas id="overlay-canvas"></canvas>
+      <canvas id="process-canvas"></canvas>
+
+      <!-- Guía de escaneo -->
+      <div class="scan-guide" id="scan-guide">
+        <div class="scan-guide-inner"></div>
+      </div>
+
+      <!-- Instrucción inferior limpia en tarjeta flotante -->
+      <div class="camera-instruction">
+        <div class="instruction-pill">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          <span id="cam-instruction">Ubíquese frente a la cámara o presente su código QR</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- LADO DERECHO: Panel de estado y confirmación -->
+    <div class="kiosk-panel state-idle" id="kiosk-panel">
+
+      <!-- Estado inicial: esperando escaneo -->
+      <div class="idle-state" id="idle-state">
+        <div class="idle-icon-wrap" id="idle-icon-wrap">
+          <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="2.5"/><line x1="15" y1="8" x2="17" y2="8"/><line x1="15" y1="12" x2="17" y2="12"/><path d="M6 16c0-1.5 1.5-2.5 3-2.5s3 1 3 2.5"/></svg>
+        </div>
+        <div class="idle-title" id="idle-title">Acreditación y Check-in</div>
+        <div class="idle-sub" id="idle-sub">Presente su <strong>código QR</strong> ante la cámara o <strong>mire de frente</strong> para reconocimiento facial.<br>Su credencial se imprimirá en la <strong>Brother QL-800</strong>.</div>
+        <div class="idle-pill-hint" id="idle-pill-hint">
+          <span id="idle-pill-text">Sistema preparado para escaneo continuo</span>
+        </div>
+      </div>
+
+      <!-- Resultado del escaneo -->
+      <div class="guest-result" id="guest-result">
+
+        <!-- Banner de estado plano -->
+        <div class="status-banner" id="status-banner">
+          <span class="banner-icon" id="banner-icon"></span>
+          <div class="banner-text">
+            <div id="banner-title"></div>
+            <div class="banner-sub" id="banner-sub"></div>
+          </div>
+        </div>
+
+        <!-- Datos del invitado -->
+        <div class="guest-body-card">
+          <div class="g-name-large" id="g-name">—</div>
+          <div class="g-code-badge"><span id="g-code">—</span></div>
+          <div class="g-details">
+            <div class="g-detail-row">
+              <span class="d-label">Empresa</span>
+              <span class="d-value" id="g-company">—</span>
+            </div>
+            <div class="g-detail-row">
+              <span class="d-label">Cargo</span>
+              <span class="d-value" id="g-position">—</span>
+            </div>
+          </div>
+
+          <!-- Botón manual plano -->
+          <button class="btn-print-kiosk" id="btn-print-kiosk" onclick="printCurrent()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+            <span id="btn-print-text">Imprimir Credencial</span>
+          </button>
+
+          <!-- Barra de auto-reset -->
+          <div class="reset-bar-wrap">
+            <div class="reset-bar" id="reset-bar"></div>
+          </div>
+          <div class="reset-hint" id="reset-hint">Próximo escaneo en 6 s…</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+
+<!-- jsQR para decodificación de QR -->
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+
+<script>
+let currentGuest        = null;
+let currentMode         = 'manual'; // 'manual' | 'auto' (controlado desde /admin)
+let scanMethod          = 'both';   // 'both' | 'facial' | 'qr' (controlado desde /admin)
+let faceThreshold       = 0.55;     // (controlado desde /admin)
+let scanning            = false;
+let cameraStream        = null;
+let lastScannedCode     = null;
+let lastScanTs          = 0;
+let resetTimer          = null;
+let syncIntervalTimer   = null;
+
+const SCAN_COOLDOWN         = 4000;
+const RESET_DELAY           = 6000;
+const FACE_IDLE_INTERVAL    = 950;  // ms cuando no hay rostro en pantalla (alivia el servidor)
+const FACE_ACTIVE_INTERVAL  = 450;  // ms cuando se detecta un rostro (alta reactividad)
+let dynamicFaceInterval     = FACE_IDLE_INTERVAL;
+
+let isFaceProcessing        = false;
+let lastFaceCheckTs         = 0;
+let unmatchedFaceFrames     = 0;
+
+const video             = document.getElementById('video');
+const processCanvas     = document.getElementById('process-canvas');
+const overlayCanvas     = document.getElementById('overlay-canvas');
+const pCtx              = processCanvas.getContext('2d', { willReadFrequently: true });
+const oCtx              = overlayCanvas.getContext('2d');
+
+// Canvas optimizado para capturas faciales ligeras (reduce 90% el payload HTTP)
+const faceCanvas        = document.createElement('canvas');
+const fCtx              = faceCanvas.getContext('2d', { willReadFrequently: true });
+
+/* ── Iconos SVG Planos para Estados ── */
+const SVG_CHECK = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+const SVG_WARN  = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`;
+const SVG_BAN   = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>`;
+const SVG_INFO  = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`;
+const SVG_PRINT = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>`;
+
+const SVG_IDLE_BOTH   = `<svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="2.5"/><line x1="15" y1="8" x2="17" y2="8"/><line x1="15" y1="12" x2="17" y2="12"/><path d="M6 16c0-1.5 1.5-2.5 3-2.5s3 1 3 2.5"/></svg>`;
+const SVG_IDLE_QR     = `<svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><line x1="7" y1="7" x2="7.01" y2="7"/><line x1="17" y1="7" x2="17.01" y2="7"/><line x1="7" y1="17" x2="7.01" y2="17"/><line x1="17" y1="17" x2="17.01" y2="17"/></svg>`;
+const SVG_IDLE_FACIAL = `<svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/><circle cx="9" cy="9" r="1.5"/><circle cx="15" cy="9" r="1.5"/><path d="M10 14c.8 1 3.2 1 4 0"/></svg>`;
+
+/* ── Sincronización de configuración desde /api/kiosk-settings ── */
+async function syncKioskSettings() {
+  try {
+    const res = await fetch('/api/kiosk-settings');
+    const data = await res.json();
+    if (data.status === 'ok' && data.settings) {
+      scanMethod    = data.settings.method || 'both';
+      currentMode   = data.settings.mode || 'manual';
+      faceThreshold = data.settings.face_threshold || 0.55;
+      updateInstructionUI();
+    }
+  } catch (err) {
+    console.debug('Error sincronizando kiosk settings:', err);
+  }
+}
+
+/* ── Adaptación Dinámica Estricta según Método (QR / Facial / Ambos) ── */
+function updateInstructionUI() {
+  const camHint     = document.getElementById('cam-instruction');
+  const welcomeHint = document.getElementById('welcome-hint-text');
+  const idleTitle   = document.getElementById('idle-title');
+  const idleSub     = document.getElementById('idle-sub');
+  const idleIcon    = document.getElementById('idle-icon-wrap');
+  const idlePill    = document.getElementById('idle-pill-text');
+
+  if (scanMethod === 'qr') {
+    // REGLA: Cero menciones a facial o rostro
+    if (welcomeHint) welcomeHint.textContent = 'Presente su código QR ante el lente de la cámara';
+    if (camHint && (!currentGuest || currentGuest === 'IDLE')) {
+      camHint.textContent = 'Acerque su código QR hacia el recuadro';
+    }
+    if (idleTitle) idleTitle.textContent = 'Acreditación por Código QR';
+    if (idleSub) {
+      idleSub.innerHTML = 'Presente su <strong>código QR</strong> ante el lente de la cámara.<br>Su credencial se imprimirá en la <strong>Brother QL-800</strong>.';
+    }
+    if (idleIcon) idleIcon.innerHTML = SVG_IDLE_QR;
+    if (idlePill) idlePill.textContent = 'Lector de código QR activo';
+  } else if (scanMethod === 'facial') {
+    // REGLA: Cero menciones a código QR
+    if (welcomeHint) welcomeHint.textContent = 'Ubique su rostro frente a la cámara para acreditación';
+    if (camHint && (!currentGuest || currentGuest === 'IDLE')) {
+      camHint.textContent = 'Mire de frente a la cámara dentro del recuadro';
+    }
+    if (idleTitle) idleTitle.textContent = 'Acreditación por Reconocimiento Facial';
+    if (idleSub) {
+      idleSub.innerHTML = 'Ubique su <strong>rostro de frente</strong> ante la cámara para identificación biométrica.<br>Su credencial se imprimirá en la <strong>Brother QL-800</strong>.';
+    }
+    if (idleIcon) idleIcon.innerHTML = SVG_IDLE_FACIAL;
+    if (idlePill) idlePill.textContent = 'Reconocimiento facial biométrico activo';
+  } else {
+    // REGLA: Ambos métodos equilibrados
+    if (welcomeHint) welcomeHint.textContent = 'Ubíquese frente a la cámara o presente su código QR';
+    if (camHint && (!currentGuest || currentGuest === 'IDLE')) {
+      camHint.textContent = 'Ubíquese frente a la cámara o presente su código QR';
+    }
+    if (idleTitle) idleTitle.textContent = 'Acreditación y Check-in';
+    if (idleSub) {
+      idleSub.innerHTML = 'Presente su <strong>código QR</strong> ante la cámara o <strong>mire de frente</strong> para reconocimiento facial.<br>Su credencial se imprimirá en la <strong>Brother QL-800</strong>.';
+    }
+    if (idleIcon) idleIcon.innerHTML = SVG_IDLE_BOTH;
+    if (idlePill) idlePill.textContent = 'Sistema preparado para escaneo continuo';
+  }
+}
+
+/* ── Control de Vistas: Bienvenida vs Kiosko ── */
+async function startCheckinSession() {
+  // Solicitar pantalla completa nativa sin barras de navegador
+  if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(() => {});
+  }
+
+  document.getElementById('welcome-view').style.display = 'none';
+  document.getElementById('kiosk-view').style.display = 'flex';
+
+  await syncKioskSettings();
+  await initCamera();
+
+  scanning = true;
+  requestAnimationFrame(scanLoop);
+
+  // Polling de configuración cada 6 segundos mientras está activo el kiosko
+  if (!syncIntervalTimer) {
+    syncIntervalTimer = setInterval(syncKioskSettings, 6000);
+  }
+}
+
+function returnToWelcome() {
+  clearTimeout(resetTimer);
+  if (syncIntervalTimer) {
+    clearInterval(syncIntervalTimer);
+    syncIntervalTimer = null;
+  }
+
+  scanning = false;
+
+  // Detener la cámara para liberar recursos de hardware
+  if (cameraStream) {
+    cameraStream.getTracks().forEach(track => track.stop());
+    cameraStream = null;
+    video.srcObject = null;
+  }
+
+  resetToIdle();
+
+  document.getElementById('kiosk-view').style.display = 'none';
+  document.getElementById('welcome-view').style.display = 'flex';
+}
+
+/* ── Inicialización de Cámara ── */
+async function initCamera() {
+  if (cameraStream) return;
+  try {
+    cameraStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } }
+    });
+    video.srcObject = cameraStream;
+    video.onloadedmetadata = () => {
+      processCanvas.width  = video.videoWidth;
+      processCanvas.height = video.videoHeight;
+      overlayCanvas.width  = video.videoWidth;
+      overlayCanvas.height = video.videoHeight;
+    };
+  } catch (err) {
+    document.getElementById('cam-instruction').textContent = 'Cámara no disponible. Verifique los permisos del navegador.';
+  }
+}
+
+/* ── Bucle Principal de Escaneo (QR y Facial) ── */
+function scanLoop() {
+  if (!scanning) return;
+
+  if (video.readyState === video.HAVE_ENOUGH_DATA) {
+    processCanvas.width  = video.videoWidth;
+    processCanvas.height = video.videoHeight;
+    overlayCanvas.width  = video.videoWidth;
+    overlayCanvas.height = video.videoHeight;
+
+    pCtx.drawImage(video, 0, 0, processCanvas.width, processCanvas.height);
+    oCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+
+    let qrFound = false;
+
+    // 1. Detección QR (si el método es 'both' o 'qr')
+    if (scanMethod === 'both' || scanMethod === 'qr') {
+      const imageData = pCtx.getImageData(0, 0, processCanvas.width, processCanvas.height);
+      const code = jsQR(imageData.data, imageData.width, imageData.height, {
+        inversionAttempts: 'dontInvert'
+      });
+
+      if (code) {
+        qrFound = true;
+        drawQRBox(code.location);
+        document.getElementById('scan-guide').classList.add('detected');
+        document.getElementById('cam-instruction').textContent = 'Código QR detectado';
+        onQRDetected(code.data);
+      }
+    }
+
+    // 2. Reconocimiento Facial (si no hubo QR, método es 'both' o 'facial' y no hay invitado activo)
+    if (!qrFound && (scanMethod === 'both' || scanMethod === 'facial') && !currentGuest) {
+      const now = Date.now();
+      if (!isFaceProcessing && (now - lastFaceCheckTs) > dynamicFaceInterval && (now - lastScanTs) > SCAN_COOLDOWN) {
+        lastFaceCheckTs = now;
+        checkFaceMatch();
+      }
+      if (!isFaceProcessing && unmatchedFaceFrames === 0) {
+        document.getElementById('scan-guide').classList.remove('detected');
+        updateInstructionUI();
+      }
+    }
+  }
+
+  requestAnimationFrame(scanLoop);
+}
+
+/* ── Reconocimiento Facial contra Backend (Optimizado y Ligero) ── */
+async function checkFaceMatch() {
+  if (isFaceProcessing || !scanning || currentGuest) return;
+  isFaceProcessing = true;
+
+  // Escalar la captura a 640px de ancho para reducir payload en 90% (de ~250KB a ~25KB)
+  const targetW = 640;
+  const targetH = Math.round(targetW * (video.videoHeight / video.videoWidth)) || 360;
+  faceCanvas.width = targetW;
+  faceCanvas.height = targetH;
+  fCtx.drawImage(video, 0, 0, targetW, targetH);
+  const frameDataUrl = faceCanvas.toDataURL('image/jpeg', 0.72);
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 2500);
+
+  try {
+    const res = await fetch('/api/facial-match', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        image_base64: frameDataUrl,
+        threshold: faceThreshold,
+        auto_checkin: (currentMode === 'auto')
+      }),
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+
+    const data = await res.json();
+
+    if (data.bbox) {
+      // Si se detectó un rostro, acelerar el ciclo a reactivo (450ms)
+      dynamicFaceInterval = FACE_ACTIVE_INTERVAL;
+      const scaleX = overlayCanvas.width / targetW;
+      const scaleY = overlayCanvas.height / targetH;
+      const scaledBBox = [
+        data.bbox[0] * scaleX,
+        data.bbox[1] * scaleY,
+        data.bbox[2] * scaleX,
+        data.bbox[3] * scaleY
+      ];
+      drawFaceBox(scaledBBox, data.guest ? data.guest.name : null, data.similarity);
+    } else {
+      // Reposo (950ms) cuando no hay nadie frente a la cámara (alivia CPU)
+      dynamicFaceInterval = FACE_IDLE_INTERVAL;
+      unmatchedFaceFrames = 0;
+    }
+
+    if (data.status === 'ok') {
+      unmatchedFaceFrames = 0;
+      document.getElementById('scan-guide').classList.add('detected');
+      lastScannedCode = data.guest.id;
+      lastScanTs = Date.now();
+      showGuestPanel(data.guest, 'new');
+      toast(`Rostro reconocido: ${data.guest.name}. Credencial emitida.`, 'success');
+      scheduleReset(true);
+    } else if (data.status === 'already_registered') {
+      unmatchedFaceFrames = 0;
+      document.getElementById('scan-guide').classList.add('detected');
+      lastScannedCode = data.guest.id;
+      lastScanTs = Date.now();
+      showGuestPanel(data.guest, 'duplicate');
+      toast(`${data.guest.name} ya cuenta con asistencia previa`, 'warn');
+      scheduleReset(false);
+    } else if (data.status === 'identified') {
+      unmatchedFaceFrames = 0;
+      document.getElementById('scan-guide').classList.add('detected');
+      lastScannedCode = data.guest.id;
+      lastScanTs = Date.now();
+      if (data.guest.checked_in) {
+        showGuestPanel(data.guest, 'duplicate');
+        toast(`${data.guest.name} ya cuenta con asistencia previa`, 'warn');
+        scheduleReset(false);
+      } else {
+        showGuestPanel(data.guest, 'pending');
+      }
+    } else if (data.status === 'not_registered') {
+      unmatchedFaceFrames = 0;
+      document.getElementById('scan-guide').classList.add('detected');
+      lastScannedCode = data.guest_id || 'UNKNOWN';
+      lastScanTs = Date.now();
+      showNotRegistered(data.guest_id, data.message || 'El perfil no coincide con ningún participante de la lista activa.');
+    } else if (data.status === 'print_failed') {
+      unmatchedFaceFrames = 0;
+      showGuestPanel(data.guest, 'error-print');
+      toast(`Error de impresión: ${data.message}`, 'error');
+      scheduleReset(false);
+    } else if (data.status === 'no_match' && data.bbox) {
+      unmatchedFaceFrames++;
+      const camHint = document.getElementById('cam-instruction');
+      if (camHint && unmatchedFaceFrames < 6) {
+        camHint.textContent = 'Analizando rostro… mire de frente a la cámara';
+      }
+      // Solo tras 6 fotogramas continuos (~3.5 seg) sin coincidencia se marca No Registrado
+      if (unmatchedFaceFrames >= 6) {
+        unmatchedFaceFrames = 0;
+        lastScannedCode = 'FACE_UNMATCHED';
+        lastScanTs = Date.now();
+        const msg = (scanMethod === 'facial')
+          ? 'No se encontró coincidencia con ningún participante registrado. Por favor acérquese al módulo de acreditación.'
+          : 'No se encontró coincidencia con ningún participante registrado. Por favor presente su código QR o acuda al módulo de soporte.';
+        showNotRegistered('Rostro no registrado', msg);
+      }
+    }
+  } catch (err) {
+    // Silencioso ante timeouts para no bloquear la experiencia continua
+  } finally {
+    isFaceProcessing = false;
+  }
+}
+
+function drawFaceBox(box, label, similarity) {
+  const [x, y, w, h] = box;
+  oCtx.save();
+  oCtx.beginPath();
+  oCtx.rect(x, y, w, h);
+  oCtx.lineWidth = 2.5;
+  oCtx.strokeStyle = label ? '#16a34a' : '#d97706';
+  oCtx.stroke();
+
+  oCtx.fillStyle = label ? 'rgba(22, 163, 74, 0.12)' : 'rgba(217, 119, 6, 0.08)';
+  oCtx.fill();
+
+  if (label) {
+    oCtx.fillStyle = '#16a34a';
+    oCtx.font = '600 14px "Plus Jakarta Sans", sans-serif';
+    const simText = similarity ? ` (${Math.round(similarity * 100)}%)` : '';
+    oCtx.fillText(`${label}${simText}`, x, Math.max(20, y - 8));
+  } else {
+    oCtx.fillStyle = '#d97706';
+    oCtx.font = '600 13px "Plus Jakarta Sans", sans-serif';
+    const simText = similarity ? ` (${Math.round(similarity * 100)}%)` : '';
+    oCtx.fillText(`Verificando rostro${simText}…`, x, Math.max(20, y - 8));
+  }
+  oCtx.restore();
+}
+
+function drawQRBox(loc) {
+  oCtx.beginPath();
+  oCtx.moveTo(loc.topLeftCorner.x,     loc.topLeftCorner.y);
+  oCtx.lineTo(loc.topRightCorner.x,    loc.topRightCorner.y);
+  oCtx.lineTo(loc.bottomRightCorner.x, loc.bottomRightCorner.y);
+  oCtx.lineTo(loc.bottomLeftCorner.x,  loc.bottomLeftCorner.y);
+  oCtx.closePath();
+  oCtx.lineWidth   = 3;
+  oCtx.strokeStyle = '#16a34a';
+  oCtx.stroke();
+  oCtx.fillStyle   = 'rgba(22, 163, 74, 0.12)';
+  oCtx.fill();
+}
+
+/* ── Detección y Procesamiento de QR ── */
+async function onQRDetected(rawCode) {
+  const code = (rawCode || '').trim();
+  if (!code) return;
+  const now  = Date.now();
+
+  if (code === lastScannedCode && (now - lastScanTs) < SCAN_COOLDOWN) return;
+  lastScannedCode = code;
+  lastScanTs      = now;
+
+  try {
+    const res  = await fetch(`/api/guest/${encodeURIComponent(code)}`);
+    const data = await res.json();
+
+    if (!res.ok || data.status === 'not_registered' || !data.id) {
+      showNotRegistered(code, data.message || 'El código QR no coincide con ningún invitado registrado en el evento.');
+      return;
+    }
+
+    const guest = data;
+    if (currentMode === 'auto') {
+      await doCheckinAndPrint(guest);
+    } else {
+      if (guest.checked_in) {
+        showGuestPanel(guest, 'duplicate');
+        toast(`${guest.name} ya cuenta con asistencia previa`, 'warn');
+        scheduleReset(false);
+      } else {
+        showGuestPanel(guest, 'pending');
+      }
+    }
+  } catch (err) {
+    showNotRegistered(code, 'Error al consultar código: ' + err.message);
+  }
+}
+
+/* ── Impresión y Confirmación de Asistencia en Modo Automático ── */
+async function doCheckinAndPrint(guest) {
+  const guestId = guest.id || guest.code;
+  const wasRegistered = guest.checked_in;
+
+  if (wasRegistered) {
+    showGuestPanel(guest, 'duplicate');
+    toast(`Asistencia previa registrada para ${guest.name || guestId}`, 'warn');
+    scheduleReset(false);
+    return;
+  }
+
+  showGuestPanel(guest, 'printing');
+  toast(`Generando credencial para ${guest.name || guestId}…`, 'warn');
+
+  try {
+    const prRes  = await fetch(`/api/print/${encodeURIComponent(guestId)}`, { method: 'POST' });
+    const prData = await prRes.json();
+
+    if (prRes.ok && (prData.print?.status === 'ok' || prData.print?.status === 'simulated')) {
+      showGuestPanel(prData.guest || guest, 'new');
+      toast(`Credencial emitida y asistencia confirmada para ${guest.name || guestId}`, 'success');
+      scheduleReset(true);
+    } else if (prData.status === 'already_registered') {
+      showGuestPanel(prData.guest || guest, 'duplicate');
+      scheduleReset(false);
+    } else {
+      showGuestPanel(guest, 'error-print');
+      toast(`Error de impresión: ${prData.message || prData.print?.message || 'Fallo de impresora'}`, 'error');
+      scheduleReset(false);
+    }
+  } catch (err) {
+    showGuestPanel(guest, 'error-print');
+    toast('Error de comunicación: ' + err.message, 'error');
+    scheduleReset(false);
+  }
+}
+
+/* ── Impresión Manual al pulsar el botón ── */
+async function printCurrent() {
+  if (!currentGuest) return;
+  const guestId = currentGuest.id || currentGuest.code;
+  const btn = document.getElementById('btn-print-kiosk');
+  const txt = document.getElementById('btn-print-text');
+  btn.disabled = true;
+  if (txt) txt.textContent = 'Imprimiendo credencial…';
+
+  try {
+    const prRes = await fetch(`/api/print/${encodeURIComponent(guestId)}?force=true`, { method: 'POST' });
+    const prData = await prRes.json();
+
+    if (prRes.ok && (prData.print?.status === 'ok' || prData.print?.status === 'simulated')) {
+      toast(`Credencial emitida y asistencia confirmada para ${currentGuest.name || guestId}`, 'success');
+      showGuestPanel(prData.guest || currentGuest, 'new');
+      scheduleReset(true);
+    } else {
+      toast(`Error al imprimir: ${prData.message || prData.print?.message || 'Fallo de impresora'}`, 'error');
+      btn.disabled = false;
+      if (txt) txt.textContent = 'Reintentar Impresión';
+    }
+  } catch (err) {
+    toast('Error: ' + err.message, 'error');
+    btn.disabled = false;
+    if (txt) txt.textContent = 'Reintentar Impresión';
+  }
+}
+
+/* ── Despliegue de Resultados en Panel Derecho ── */
+function showGuestPanel(guest, state) {
+  currentGuest = guest;
+
+  document.getElementById('idle-state').style.display = 'none';
+  document.getElementById('guest-result').classList.add('visible');
+
+  document.getElementById('g-name').textContent     = guest.name || '—';
+  document.getElementById('g-code').textContent     = guest.id || '—';
+  document.getElementById('g-company').textContent  = guest.company || '—';
+  document.getElementById('g-position').textContent = guest.position || '—';
+
+  const banner = document.getElementById('status-banner');
+  const panel  = document.getElementById('kiosk-panel');
+  const icon   = document.getElementById('banner-icon');
+  const title  = document.getElementById('banner-title');
+  const sub    = document.getElementById('banner-sub');
+
+  banner.className = `status-banner ${state}`;
+
+  if (state === 'new') {
+    icon.innerHTML    = SVG_CHECK;
+    title.textContent = 'Check-in Confirmado y Credencial Emitida';
+    sub.textContent   = 'Asistencia registrada y etiqueta impresa en Brother QL-800.';
+    panel.className   = 'kiosk-panel state-new';
+  } else if (state === 'printing') {
+    icon.innerHTML    = SVG_PRINT;
+    title.textContent = 'Imprimiendo Credencial…';
+    sub.textContent   = 'Generando datos de acceso en Brother QL-800.';
+    panel.className   = 'kiosk-panel state-new';
+  } else if (state === 'duplicate') {
+    icon.innerHTML    = SVG_WARN;
+    title.textContent = 'Invitado con Registro Previo';
+    const ts = guest.checked_in_at
+      ? new Date(guest.checked_in_at).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })
+      : '';
+    sub.textContent = (ts ? `Asistencia registrada previamente a las ${ts}. ` : 'Ya fue registrado con anterioridad. ') + 'La reimpresión de credencial solo está autorizada desde el panel de administración.';
+    panel.className = 'kiosk-panel state-duplicate';
+  } else if (state === 'pending') {
+    icon.innerHTML    = SVG_INFO;
+    title.textContent = 'Invitado Identificado — Asistencia Pendiente';
+    sub.textContent   = 'Presione el botón para imprimir la credencial y confirmar su asistencia.';
+    panel.className   = 'kiosk-panel state-idle';
+  } else if (state === 'error-print') {
+    icon.innerHTML    = SVG_BAN;
+    title.textContent = 'Fallo en Impresión';
+    sub.textContent   = 'Revise la impresora Brother QL-800. El check-in permanece pendiente.';
+    panel.className   = 'kiosk-panel state-error';
+  } else {
+    icon.innerHTML    = SVG_BAN;
+    title.textContent = 'Código no Encontrado';
+    sub.textContent   = `Código: ${guest.id || '—'}. Consulte en el módulo de acreditación.`;
+    panel.className   = 'kiosk-panel state-error';
+  }
+
+  // Control estricto del botón de impresión: SOLO visible para primer check-in (pending).
+  // La reimpresión está deshabilitada en el kiosko (solo permitida desde el panel de administración).
+  const printBtn = document.getElementById('btn-print-kiosk');
+  const printTxt = document.getElementById('btn-print-text');
+  if (state === 'pending') {
+    if (printTxt) printTxt.textContent = 'Imprimir Credencial y Confirmar';
+    printBtn.classList.add('show');
+    printBtn.disabled = false;
+  } else {
+    printBtn.classList.remove('show');
+    printBtn.disabled = true;
+  }
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function showNotRegistered(code, detailMessage) {
+  currentGuest = null;
+
+  document.getElementById('idle-state').style.display = 'none';
+  document.getElementById('guest-result').classList.add('visible');
+
+  // Títulos y subtítulos estrictamente adaptados según el modo de escaneo
+  let titleText = 'Usuario No Registrado';
+  let defaultSub = 'No se encontró coincidencia con ningún participante registrado.';
+  let defaultCamHint = 'Usuario no registrado. Por favor acérquese al módulo de soporte.';
+
+  if (scanMethod === 'qr') {
+    titleText = 'Código QR no Registrado';
+    defaultSub = 'El código QR no coincide con ningún participante registrado en la lista oficial.';
+    defaultCamHint = 'Código QR no registrado. Por favor acérquese al módulo de soporte.';
+  } else if (scanMethod === 'facial') {
+    titleText = 'Rostro no Registrado';
+    defaultSub = 'El perfil facial no coincide con ningún participante registrado en la lista oficial.';
+    defaultCamHint = 'Rostro no registrado. Por favor acérquese al módulo de soporte.';
+  } else {
+    titleText = 'Usuario No Registrado';
+    defaultSub = 'El código QR o perfil facial no coincide con ningún participante registrado.';
+    defaultCamHint = 'Usuario no registrado. Presente su código QR o acérquese a soporte.';
+  }
+
+  // Mensaje visual de Usuario No Registrado en Flat Design
+  const nameEl = document.getElementById('g-name');
+  const labelNotReg = (scanMethod === 'facial') ? 'ROSTRO NO REGISTRADO' : ((scanMethod === 'qr') ? 'CÓDIGO QR NO REGISTRADO' : 'USUARIO NO REGISTRADO');
+  nameEl.innerHTML = `<span style="color:#dc2626; font-weight:800; letter-spacing:-0.01em;">${labelNotReg}</span>`;
+
+  const codeEl = document.getElementById('g-code');
+  codeEl.textContent = code ? `Identificación: ${code}` : 'Sin datos coincidentes';
+
+  document.getElementById('g-company').innerHTML = '<span style="color:#dc2626; font-weight:600;">No figura en la lista oficial</span>';
+  document.getElementById('g-position').innerHTML = '<span style="color:#475569;">Por favor acérquese al módulo de acreditación</span>';
+
+  const btn = document.getElementById('btn-print-kiosk');
+  btn.classList.remove('show');
+  btn.disabled = true;
+
+  const banner = document.getElementById('status-banner');
+  banner.className = 'status-banner error';
+  document.getElementById('banner-icon').innerHTML    = SVG_BAN;
+  document.getElementById('banner-title').textContent = titleText;
+  document.getElementById('banner-sub').textContent   = detailMessage || defaultSub;
+  document.getElementById('kiosk-panel').className    = 'kiosk-panel state-error';
+
+  const camHint = document.getElementById('cam-instruction');
+  if (camHint) camHint.textContent = defaultCamHint;
+
+  toast(`No registrado: ${code || 'desconocido'}`, 'error');
+
+  scheduleReset(false);
+}
+
+function showError(code, detailMessage) {
+  showNotRegistered(code, detailMessage);
+}
+
+/**
+ * Controla el temporizador de reseteo.
+ * @param {boolean} returnToWelcomeAfter - Si es true, al terminar la cuenta regresiva vuelve a la pantalla de bienvenida.
+ *                                         Si es false, solo resetea el panel a idle sin salir del kiosko.
+ */
+function scheduleReset(returnToWelcomeAfter = false) {
+  clearTimeout(resetTimer);
+  const bar = document.getElementById('reset-bar');
+  bar.classList.remove('animate');
+  void bar.offsetWidth;
+  bar.style.transition = `transform ${RESET_DELAY}ms linear`;
+  bar.style.transform  = 'scaleX(0)';
+
+  const hintEl = document.getElementById('reset-hint');
+  if (returnToWelcomeAfter) {
+    hintEl.textContent = `Acreditación completada. Volviendo al inicio en ${RESET_DELAY / 1000} s…`;
+    resetTimer = setTimeout(() => {
+      returnToWelcome();
+    }, RESET_DELAY);
+  } else {
+    hintEl.textContent = `Listo para nuevo intento en ${RESET_DELAY / 1000} s…`;
+    resetTimer = setTimeout(() => {
+      resetToIdle();
+    }, RESET_DELAY);
+  }
+}
+
+function resetToIdle() {
+  currentGuest = null;
+  lastScannedCode = null;
+  unmatchedFaceFrames = 0;
+
+  document.getElementById('idle-state').style.display = '';
+  document.getElementById('guest-result').classList.remove('visible');
+  document.getElementById('btn-print-kiosk').classList.remove('show');
+  document.getElementById('kiosk-panel').className = 'kiosk-panel state-idle';
+
+  document.getElementById('g-name').textContent = '—';
+  document.getElementById('g-code').textContent = '—';
+  document.getElementById('g-company').textContent = '—';
+  document.getElementById('g-position').textContent = '—';
+
+  updateInstructionUI();
+
+  const bar = document.getElementById('reset-bar');
+  if (bar) {
+    bar.style.transition = 'none';
+    bar.style.transform  = 'scaleX(1)';
+  }
+}
+
+function toast(msg, type = 'success') {
+  const c = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className   = `toast ${type}`;
+  t.textContent = msg;
+  c.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
+
+// Carga inmediata de configuración y adaptación dinámica de textos al abrir la página
+document.addEventListener('DOMContentLoaded', () => {
+  syncKioskSettings();
+});
+</script>
+
+</body>
+</html>

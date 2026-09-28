@@ -1,0 +1,75 @@
+from app.services.auth_service import ensure_default_admin, authenticate_user, change_password
+from app.services.audit_service import log_audit
+from app.services.printer_service import (
+    get_printer_connection_status,
+    purge_printer_queue,
+    build_label_image,
+    print_guest_ticket,
+    check_usb_device_present,
+)
+from app.services.face_service import (
+    init_face_service,
+    reload_embeddings_from_db,
+    extract_face_feature,
+    match_face,
+    enroll_guest_face,
+    delete_guest_face,
+    delete_all_enrolled_faces,
+    get_enrolled_counts,
+)
+from app.services.guest_service import (
+    get_or_create_active_event,
+    get_kiosk_settings,
+    update_kiosk_settings,
+    find_guest,
+    list_guests,
+    create_guest,
+    delete_guest,
+    reset_all_checkins,
+    get_event_stats,
+    extract_candidate_ids,
+)
+from app.services.checkin_service import process_checkin
+from app.services.import_service import (
+    sync_onedrive_link,
+    parse_excel_file,
+    parse_csv_stream,
+    save_parsed_guests_to_event,
+    migrate_legacy_data,
+)
+
+__all__ = [
+    "ensure_default_admin",
+    "authenticate_user",
+    "change_password",
+    "log_audit",
+    "get_printer_connection_status",
+    "purge_printer_queue",
+    "build_label_image",
+    "print_guest_ticket",
+    "check_usb_device_present",
+    "init_face_service",
+    "reload_embeddings_from_db",
+    "extract_face_feature",
+    "match_face",
+    "enroll_guest_face",
+    "delete_guest_face",
+    "delete_all_enrolled_faces",
+    "get_enrolled_counts",
+    "get_or_create_active_event",
+    "get_kiosk_settings",
+    "update_kiosk_settings",
+    "find_guest",
+    "list_guests",
+    "create_guest",
+    "delete_guest",
+    "reset_all_checkins",
+    "get_event_stats",
+    "extract_candidate_ids",
+    "process_checkin",
+    "sync_onedrive_link",
+    "parse_excel_file",
+    "parse_csv_stream",
+    "save_parsed_guests_to_event",
+    "migrate_legacy_data",
+]

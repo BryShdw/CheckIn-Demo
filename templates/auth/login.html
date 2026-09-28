@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Iniciar Sesión — Panel Administrativo DACER</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <style>
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg);
+      padding: 20px;
+    }
+    .login-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 44px 40px;
+      width: 100%;
+      max-width: 440px;
+      box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.06);
+      text-align: center;
+    }
+    .login-logo {
+      height: 44px;
+      max-width: 220px;
+      object-fit: contain;
+      margin-bottom: 24px;
+    }
+    .login-badge {
+      display: inline-block;
+      background: var(--accent-light);
+      border: 1px solid var(--accent-border);
+      color: var(--accent);
+      padding: 4px 14px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+    .login-title {
+      font-size: 1.45rem;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: -0.02em;
+      margin-bottom: 6px;
+    }
+    .login-sub {
+      font-size: 0.88rem;
+      color: var(--muted);
+      margin-bottom: 28px;
+    }
+    .form-group {
+      text-align: left;
+      margin-bottom: 18px;
+    }
+    .form-group label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--silver);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      margin-bottom: 6px;
+    }
+    .form-input {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface2);
+      color: var(--text);
+      font-size: 0.95rem;
+      font-family: inherit;
+      box-sizing: border-box;
+      outline: none;
+      transition: all 0.15s ease;
+    }
+    .form-input:focus {
+      border-color: var(--accent);
+      background: #ffffff;
+      box-shadow: 0 0 0 3px var(--accent-light);
+    }
+    .btn-submit {
+      width: 100%;
+      padding: 13px;
+      border: none;
+      border-radius: var(--radius);
+      background: var(--accent);
+      color: #ffffff;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s ease;
+      margin-top: 10px;
+    }
+    .btn-submit:hover {
+      background: var(--accent-hover);
+    }
+    .flash-box {
+      padding: 12px 16px;
+      border-radius: var(--radius);
+      font-size: 0.88rem;
+      font-weight: 600;
+      margin-bottom: 20px;
+      text-align: left;
+    }
+    .flash-danger {
+      background: var(--danger-bg);
+      border: 1px solid var(--danger-border);
+      color: var(--danger);
+    }
+    .flash-warn {
+      background: var(--warn-bg);
+      border: 1px solid var(--warn-border);
+      color: var(--warn);
+    }
+    .flash-info {
+      background: var(--info-bg);
+      border: 1px solid var(--info-border);
+      color: var(--info);
+    }
+    .flash-success {
+      background: var(--success-bg);
+      border: 1px solid var(--success-border);
+      color: var(--success);
+    }
+    .kiosk-link {
+      display: inline-block;
+      margin-top: 24px;
+      font-size: 0.85rem;
+      color: var(--muted);
+      text-decoration: none;
+      transition: color 0.15s ease;
+    }
+    .kiosk-link:hover {
+      color: var(--accent);
+    }
+  </style>
+</head>
+<body>
+
+<div class="login-card">
+  <img src="/static/logo-dark.png" alt="DACER" class="login-logo">
+  
+  <div>
+    <span class="login-badge">Acceso Administrativo</span>
+    <h1 class="login-title">Control de Eventos</h1>
+    <p class="login-sub">Ingresa tus credenciales para gestionar el sistema</p>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="flash-box flash-{{ category }}">{{ message }}</div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  <form method="POST" action="/auth/login">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    
+    <div class="form-group">
+      <label for="username">Usuario o Correo</label>
+      <input type="text" id="username" name="username" class="form-input" 
+             value="{{ username or '' }}" required autofocus placeholder="Ej. Admin">
+    </div>
+
+    <div class="form-group">
+      <label for="password">Contraseña</label>
+      <input type="password" id="password" name="password" class="form-input" 
+             required placeholder="••••••••">
+    </div>
+
+    <button type="submit" class="btn-submit">Ingresar al Panel</button>
+  </form>
+
+  <a href="/" class="kiosk-link">← Volver al Kiosko de Autoservicio</a>
+</div>
+
+</body>
+</html>
