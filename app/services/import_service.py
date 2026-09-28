@@ -344,15 +344,8 @@ def sync_onedrive_link(raw_url: str, event_id: int | None = None) -> tuple[bool,
         if not parsed:
             return False, "El archivo descargado está vacío o no tiene columnas reconocibles (Código, Nombre, etc.).", 0
 
-        # Guardar en caché local de respaldo
-        Config.ONEDRIVE_CACHES_DIR.mkdir(parents=True, exist_ok=True)
-        cache_name = f"doc_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
-        cache_path = Config.ONEDRIVE_CACHES_DIR / cache_name
-        cache_path.write_bytes(raw_bytes)
-
-        # Actualizar evento en BD
+        # Actualizar evento en BD (los datos residen 100% en MySQL, sin persistir archivos en disco)
         event.onedrive_url = raw_url
-        event.cache_filename = cache_name
         event.last_sync = datetime.utcnow()
 
         ins, upd = save_parsed_guests_to_event(parsed, event)

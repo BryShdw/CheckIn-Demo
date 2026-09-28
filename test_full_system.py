@@ -13,6 +13,7 @@ Valida:
 10. Importación de archivo Excel / CSV a MySQL.
 """
 import io
+import os
 import openpyxl
 from app import create_app
 from app.extensions import db
@@ -29,7 +30,22 @@ def run_tests():
     client = app.test_client()
 
     with app.app_context():
-        # 1. Verificar Usuario Admin por defecto
+        # 1. Limpieza de estado residual previo
+        from app.models.kiosk_setting import KioskSetting
+        Checkin.query.delete()
+        Guest.query.delete()
+        first_event = Event.query.order_by(Event.id.asc()).first()
+        if first_event:
+            Event.query.filter(Event.id != first_event.id).delete()
+            Event.query.update({Event.is_active: False})
+            first_event.is_active = True
+            ks = KioskSetting.query.filter_by(event_id=first_event.id).first()
+            if ks:
+                ks.face_threshold = 0.70
+            else:
+                db.session.add(KioskSetting(event_id=first_event.id, face_threshold=0.70))
+        
+        # Verificar Usuario Admin por defecto
         admin = User.query.filter_by(username="Admin").first()
         assert admin is not None, "El usuario Admin debe existir en MySQL."
         print(f"[OK] Usuario Admin encontrado en MySQL (ID: {admin.id}, Rol: {admin.role})")
@@ -274,7 +290,27 @@ def run_tests():
     assert status_resp["checked_in"] is False
     print("[OK] POST /api/guest/ASIST-001/status desmarcó asistencia exitosamente (HTTP 200, no 405).")
 
-    # 14. Limpieza final: Eliminar evento de prueba y dejar la BD completamente en 0 invitados
+    # 14. Probar Endpoint de Rostros y Almacenamiento Cero en Disco
+    res = client.get("/api/guest/ASIST-001/faces")
+    assert res.status_code == 200
+    faces_data = res.get_json()
+    assert faces_data["status"] == "ok"
+    assert "faces" in faces_data
+    print(f"[OK] GET /api/guest/ASIST-001/faces responde 200 (Total rostros: {len(faces_data['faces'])}).")
+
+    # Probar endpoint de enrolamiento facial con payload inválido/sin rostro para verificar respuesta JSON adecuada
+    res = client.post("/api/guest/ASIST-001/face", json={"image_base64": "data:image/jpeg;base64,invalidbase64data"})
+    assert res.status_code in (200, 400)
+    print("[OK] POST /api/guest/ASIST-001/face maneja peticiones JSON de enrolamiento correctamente.")
+
+    # Verificar que NO se crearon archivos en disco en las carpetas de caché/imágenes
+    od_files = [f for f in os.listdir("onedrive_caches") if f != ".gitkeep"]
+    face_files = [f for f in os.listdir("face_data/images") if f != ".gitkeep"]
+    assert len(od_files) == 0, f"Se detectaron archivos temporales en onedrive_caches: {od_files}"
+    assert len(face_files) == 0, f"Se detectaron imágenes en face_data/images: {face_files}"
+    print("[OK] Verificado: Cero archivos en disco en onedrive_caches/ y face_data/images/ (100% en memoria y MySQL).")
+
+    # 15. Limpieza final: Eliminar evento de prueba y dejar la BD completamente en 0 invitados
     with app.app_context():
         Checkin.query.delete()
         Guest.query.delete()

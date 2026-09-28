@@ -1,3 +1,4 @@
+import base64
 import json
 import logging
 import os
@@ -213,29 +214,33 @@ def match_face(img_bgr: np.ndarray, threshold: float = DEFAULT_COSINE_THRESHOLD)
 
 
 def enroll_guest_face(guest: Guest, img_bgr: np.ndarray) -> tuple[bool, str, dict | None]:
-    """Enrola una fotografía para un invitado, guardando la imagen y registrando el FaceProfile en MySQL."""
+    """Enrola una fotografía para un invitado, guardando el embedding y miniatura base64 directamente en MySQL (sin escribir en disco)."""
     init_face_service()
     extracted = extract_face_feature(img_bgr)
     if extracted is None:
         return False, "No se detectó un rostro claro en la imagen.", None
 
     feat, aligned, bbox, score = extracted
-    guest_dir = Config.FACE_IMAGES_DIR / guest.guest_code
-    guest_dir.mkdir(parents=True, exist_ok=True)
+
+    # Codificar la miniatura alineada en base64 en memoria (cero archivos en disco)
+    thumb_data = None
+    try:
+        _, enc_buf = cv2.imencode(".jpg", aligned, [cv2.IMWRITE_JPEG_QUALITY, 85])
+        thumb_data = "data:image/jpeg;base64," + base64.b64encode(enc_buf).decode("ascii")
+    except Exception as e:
+        log.warning(f"No se pudo generar miniatura base64: {e}")
 
     ts_str = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:19]
     image_id = f"img_{ts_str}"
     raw_fname = f"{image_id}.jpg"
     thumb_fname = f"{image_id}_aligned.jpg"
 
-    cv2.imwrite(str(guest_dir / raw_fname), img_bgr, [cv2.IMWRITE_JPEG_QUALITY, 90])
-    cv2.imwrite(str(guest_dir / thumb_fname), aligned, [cv2.IMWRITE_JPEG_QUALITY, 92])
-
     profile = FaceProfile(
         guest_id=guest.id,
         image_id=image_id,
         filename=raw_fname,
         thumb_filename=thumb_fname,
+        thumb_data=thumb_data,
         embedding_json=json.dumps(feat.tolist()),
         quality_score=score,
     )
@@ -249,6 +254,7 @@ def enroll_guest_face(guest: Guest, img_bgr: np.ndarray) -> tuple[bool, str, dic
             "image_id": image_id,
             "filename": raw_fname,
             "thumb_filename": thumb_fname,
+            "thumb_data": thumb_data,
             "embedding": feat.tolist(),
             "score": score,
         })
@@ -257,22 +263,14 @@ def enroll_guest_face(guest: Guest, img_bgr: np.ndarray) -> tuple[bool, str, dic
 
 
 def delete_guest_face(guest: Guest, image_id: str | None = None) -> bool:
-    """Elimina perfiles faciales de un invitado en MySQL y en disco."""
+    """Elimina perfiles faciales de un invitado en MySQL y en memoria (sin archivos en disco)."""
     with _face_lock:
         query = FaceProfile.query.filter_by(guest_id=guest.id)
         if image_id:
             query = query.filter_by(image_id=image_id)
         profiles = query.all()
 
-        guest_dir = Config.FACE_IMAGES_DIR / guest.guest_code
         for p in profiles:
-            for fn in [p.filename, p.thumb_filename]:
-                fp = guest_dir / fn
-                if fp.exists():
-                    try:
-                        fp.unlink()
-                    except Exception:
-                        pass
             db.session.delete(p)
 
         db.session.commit()
@@ -284,14 +282,12 @@ def delete_guest_face(guest: Guest, image_id: str | None = None) -> bool:
                     del _embeddings_cache[guest.guest_code]
             else:
                 del _embeddings_cache[guest.guest_code]
-                if guest_dir.exists():
-                    shutil.rmtree(guest_dir, ignore_errors=True)
 
     return True
 
 
 def delete_all_enrolled_faces() -> dict:
-    """Elimina todas las fotos de enrolamiento en MySQL y en disco."""
+    """Elimina todas las fotos de enrolamiento en MySQL y resetea la memoria de IA."""
     global _embeddings_cache
     with _face_lock:
         count = FaceProfile.query.count()
@@ -304,9 +300,10 @@ def delete_all_enrolled_faces() -> dict:
                 try:
                     if item.is_dir():
                         shutil.rmtree(item, ignore_errors=True)
-                    elif item.is_file():
+                    elif item.is_file() and not item.name.startswith("."):
                         item.unlink()
                 except Exception as e:
+                    pass
                     log.warning(f"Error limpiando {item.name}: {e}")
 
         log.info(f"Se eliminaron todas las fotos faciales de {count} perfiles.")

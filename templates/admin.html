@@ -315,61 +315,6 @@
           <strong>Manual:</strong> Muestra los datos y espera pulsar "Imprimir".<br><strong>Auto:</strong> Imprime directamente al detectar el rostro o QR.
         </div>
       </div>
-
-      <!-- 3. Sensibilidad y Umbral Facial -->
-      <div style="background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:12px 14px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-          <label style="font-size:0.8rem; color:var(--muted); font-weight:700; text-transform:uppercase;">
-            3. Umbral Facial (Sensibilidad)
-          </label>
-          <span id="threshold-val-badge" style="font-size:0.85rem; font-weight:700; color:var(--accent);">0.70</span>
-        </div>
-        <div style="display:flex; align-items:center; gap:10px;">
-          <input type="range" id="admin-threshold-slider" min="0.45" max="0.85" step="0.01" value="0.70"
-                 oninput="onThresholdSliderInput(this.value)"
-                 onchange="updateKioskSetting('face_threshold', parseFloat(this.value))"
-                 style="flex:1; accent-color:var(--accent); cursor:pointer;">
-        </div>
-        <div style="font-size:0.73rem; color:var(--muted); margin-top:6px;">
-          <strong>0.70 (Recomendado):</strong> Máxima precisión y especificidad biométrica para evitar falsos positivos.
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Barra de Gestión de Documentos OneDrive & Caché -->
-  <div class="onedrive-bar" id="onedrive-bar" style="flex-direction:column; gap:14px; padding:16px;">
-    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; width:100%;">
-      <div style="display:flex; align-items:center; gap:8px;">
-        <span style="font-size:0.95rem; font-weight:700;">Documentos de Invitados en OneDrive / SharePoint</span>
-      </div>
-      <div style="display:flex; gap:8px; align-items:center;">
-        <button class="btn" onclick="openAddDocModal()" style="font-size:0.85rem; font-weight:600; background:rgba(204,35,43,0.15); border-color:rgba(204,35,43,0.4); color:var(--accent);">
-          Agregar Enlace OneDrive
-        </button>
-      </div>
-    </div>
-
-    <!-- Selector de Documento Activo y Acciones -->
-    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; width:100%;">
-      <label for="doc-selector" style="font-size:0.85rem; color:var(--muted); font-weight:600; white-space:nowrap;">
-        Documento Activo:
-      </label>
-      <select id="doc-selector" onchange="onSelectDocument(this.value)" style="flex:1; min-width:240px; padding:8px 12px; border-radius:8px; border:1px solid var(--border); background:var(--surface2); color:var(--text); font-size:0.9rem; outline:none; font-weight:500;">
-        <option value="">Cargando documentos…</option>
-      </select>
-      <button class="btn" id="btn-sync-doc" onclick="syncActiveDoc()" style="font-size:0.85rem; padding:8px 14px;" title="Descargar la última versión desde OneDrive">
-        Sincronizar
-      </button>
-      <button class="btn danger" id="btn-del-doc" onclick="deleteActiveDoc()" style="font-size:0.85rem; padding:8px 14px;" title="Eliminar este enlace y su archivo en caché">
-        Eliminar
-      </button>
-    </div>
-
-    <!-- Metadatos del documento activo -->
-    <div style="background:var(--surface2); border-radius:8px; padding:10px 14px; font-size:0.83rem; color:var(--muted); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; width:100%;">
-      <div id="doc-meta-info">Cargando detalles del documento activo…</div>
-      <div id="doc-sync-info"></div>
     </div>
   </div>
 
@@ -446,30 +391,6 @@
       <div class="modal-actions">
         <button type="button" class="btn" onclick="closeAddGuestModal()">Cancelar</button>
         <button type="submit" class="btn" style="background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600;">Guardar</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<!-- Modal para Agregar Enlace OneDrive -->
-<div class="modal-backdrop" id="doc-modal">
-  <div class="modal-box">
-    <div class="modal-title">Agregar Enlace OneDrive / SharePoint</div>
-    <form id="doc-form" onsubmit="submitAddDocument(event)">
-      <div class="form-group">
-        <label for="doc-name">Nombre / Alias del Documento *</label>
-        <input type="text" id="doc-name" required placeholder="Ej. Invitados Evento Principal">
-      </div>
-      <div class="form-group">
-        <label for="doc-url">Enlace Compartido de OneDrive o SharePoint *</label>
-        <input type="url" id="doc-url" required placeholder="https://1drv.ms/u/... o enlace compartido de SharePoint">
-        <span style="font-size:0.75rem; color:var(--muted); display:block; margin-top:4px;">
-          El archivo debe ser un CSV con columnas: ID, Nombres y Apellidos, Empresa, Cargo.
-        </span>
-      </div>
-      <div class="modal-actions">
-        <button type="button" class="btn" onclick="closeAddDocModal()">Cancelar</button>
-        <button type="submit" id="btn-submit-doc" class="btn" style="background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600;">Descargar y Activar</button>
       </div>
     </form>
   </div>
@@ -949,185 +870,6 @@ async function updateKioskSetting(key, val) {
   }
 }
 
-async function loadDocuments() {
-  try {
-    const res = await fetch('/api/documents');
-    const data = await res.json();
-    currentDocuments = data.documents || [];
-    currentActiveDocId = data.active_doc_id;
-
-    const selector = document.getElementById('doc-selector');
-    selector.innerHTML = '';
-
-    if (!currentDocuments.length) {
-      selector.innerHTML = '<option value="">No hay documentos configurados</option>';
-      document.getElementById('doc-meta-info').innerHTML = '<span style="color:var(--danger)">No hay ningún enlace de OneDrive configurado.</span>';
-      document.getElementById('doc-sync-info').innerHTML = '';
-      return;
-    }
-
-    currentDocuments.forEach(doc => {
-      const opt = document.createElement('option');
-      opt.value = doc.id;
-      const count = doc.guest_count !== undefined ? `${doc.guest_count} invitados` : '—';
-      opt.textContent = `${doc.name} (${count}) ${doc.id === currentActiveDocId ? '(Activo)' : ''}`;
-      if (doc.id === currentActiveDocId) {
-        opt.selected = true;
-      }
-      selector.appendChild(opt);
-    });
-
-    const activeDoc = data.active_document || currentDocuments.find(d => d.id === currentActiveDocId) || currentDocuments[0];
-    if (activeDoc) {
-      const isOnline = data.data_source === 'onedrive';
-      const lastSyncStr = activeDoc.last_sync
-        ? new Date(activeDoc.last_sync).toLocaleString('es', { dateStyle:'short', timeStyle:'short' })
-        : 'Pendiente';
-
-      document.getElementById('doc-meta-info').innerHTML = `
-        <span>Archivo: <strong>${activeDoc.cache_file || 'en memoria'}</strong></span> • 
-        <span>Enlace: <a href="${activeDoc.url}" target="_blank" style="color:var(--accent); text-decoration:none;" title="${activeDoc.url}">Ver en OneDrive ↗</a></span>
-      `;
-      document.getElementById('doc-sync-info').innerHTML = `
-        <span style="color:${isOnline ? 'var(--success)' : 'var(--warn)'}; font-weight:600;">● ${isOnline ? 'En Línea' : 'Caché Local'}</span> • 
-        <span>Sincronizado: <strong>${lastSyncStr}</strong></span>
-      `;
-    }
-  } catch (err) {
-    console.error('Error cargando documentos:', err);
-  }
-}
-
-async function onSelectDocument(docId) {
-  if (!docId || docId === currentActiveDocId) return;
-
-  toast(`Cambiando a documento seleccionado…`, 'warn');
-  try {
-    const res = await fetch('/api/documents/select', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: docId })
-    });
-    const data = await res.json();
-    if (data.status === 'ok') {
-      toast(`${data.message}`, 'success');
-      await loadDocuments();
-      await loadGuests();
-      filterTable();
-    } else {
-      toast(`Error: ${data.error || 'No se pudo cambiar'}`, 'error');
-    }
-  } catch (err) {
-    toast(`Error al conectar: ${err.message}`, 'error');
-  }
-}
-
-async function syncActiveDoc() {
-  const selector = document.getElementById('doc-selector');
-  const docId = selector.value || currentActiveDocId;
-  if (!docId) return;
-
-  const btn = document.getElementById('btn-sync-doc');
-  const prevText = btn.textContent;
-  btn.textContent = 'Sincronizando…';
-  btn.disabled = true;
-
-  try {
-    const res = await fetch(`/api/documents/${encodeURIComponent(docId)}/sync`, { method: 'POST' });
-    const data = await res.json();
-    if (data.status === 'ok') {
-      toast(`${data.message}`, 'success');
-    } else if (data.status === 'warning') {
-      toast(`${data.message}`, 'warn');
-    } else {
-      toast(`Error: ${data.error || data.message || 'Fallo al sincronizar'}`, 'error');
-    }
-    await loadDocuments();
-    await loadGuests();
-    filterTable();
-  } catch (err) {
-    toast(`Error de conexión: ${err.message}`, 'error');
-  } finally {
-    btn.textContent = prevText;
-    btn.disabled = false;
-  }
-}
-
-async function deleteActiveDoc() {
-  const selector = document.getElementById('doc-selector');
-  const docId = selector.value || currentActiveDocId;
-  if (!docId) return;
-
-  const doc = currentDocuments.find(d => d.id === docId);
-  const name = doc ? doc.name : docId;
-
-  if (!confirm(`¿Eliminar el documento "${name}" y su archivo en caché local?\n\nSi es el único documento, no podrá eliminarse.`)) return;
-
-  try {
-    const res = await fetch(`/api/documents/${encodeURIComponent(docId)}`, { method: 'DELETE' });
-    const data = await res.json();
-    if (data.status === 'ok') {
-      toast(`Documento "${name}" eliminado`, 'warn');
-      await loadDocuments();
-      await loadGuests();
-      filterTable();
-    } else {
-      toast(`Error: ${data.error || 'No se pudo eliminar'}`, 'error');
-    }
-  } catch (err) {
-    toast(`Error al eliminar: ${err.message}`, 'error');
-  }
-}
-
-function openAddDocModal() {
-  document.getElementById('doc-form').reset();
-  document.getElementById('doc-name').value = `Invitados ${new Date().toLocaleDateString('es')}`;
-  document.getElementById('doc-modal').classList.add('open');
-}
-
-function closeAddDocModal() {
-  document.getElementById('doc-modal').classList.remove('open');
-}
-
-async function submitAddDocument(e) {
-  e.preventDefault();
-  const name = document.getElementById('doc-name').value.trim();
-  const url = document.getElementById('doc-url').value.trim();
-  const submitBtn = document.getElementById('btn-submit-doc');
-
-  if (!url) {
-    toast('Debe proporcionar un enlace válido', 'warn');
-    return;
-  }
-
-  const prevText = submitBtn.textContent;
-  submitBtn.textContent = '⏳ Descargando y validando…';
-  submitBtn.disabled = true;
-
-  try {
-    const res = await fetch('/api/documents', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, url })
-    });
-    const data = await res.json();
-    if (data.status === 'ok') {
-      toast(`${data.message}`, 'success');
-      closeAddDocModal();
-      await loadDocuments();
-      await loadGuests();
-      filterTable();
-    } else {
-      toast(`Error: ${data.error || 'No se pudo procesar el enlace'}`, 'error');
-    }
-  } catch (err) {
-    toast(`Error de red: ${err.message}`, 'error');
-  } finally {
-    submitBtn.textContent = prevText;
-    submitBtn.disabled = false;
-  }
-}
-
 
 async function loadPrinterStatus() {
   try {
@@ -1567,6 +1309,10 @@ async function startFaceWebcam() {
       audio: false
     });
     video.srcObject = faceWebcamStream;
+    video.onloadedmetadata = async () => {
+      try { await video.play(); } catch(e) {}
+    };
+    try { await video.play(); } catch(e) {}
   } catch (err) {
     showFaceStatus(`No se pudo acceder a la cámara web: ${err.message}`, 'error');
   }
@@ -1584,8 +1330,8 @@ function stopFaceWebcam() {
 async function captureFaceSnapshot() {
   if (!currentFaceGuestId) return;
   const video = document.getElementById('face-webcam');
-  if (!video.videoWidth) {
-    showFaceStatus('La cámara web aún no está lista.', 'error');
+  if (!video.videoWidth || !video.videoHeight) {
+    showFaceStatus('La cámara web aún no está transmitiendo video. Espera un momento.', 'error');
     return;
   }
 
@@ -1605,12 +1351,13 @@ async function captureFaceSnapshot() {
     const res = await fetch(`/api/guest/${encodeURIComponent(currentFaceGuestId)}/face`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ image_base64: dataUrl })
+      body: JSON.stringify({ image: dataUrl, image_base64: dataUrl })
     });
     const data = await res.json();
-    if (data.success) {
-      showFaceStatus(`${data.message}`, 'success');
+    if (data.status === 'ok' || data.success) {
+      showFaceStatus(`${data.message || 'Rostro enrolado correctamente'}`, 'success');
       await loadGuestFaces(currentFaceGuestId);
+      await loadGuests();
     } else {
       showFaceStatus(`${data.error || 'No se detectó rostro nítido'}`, 'error');
     }
@@ -1633,6 +1380,7 @@ async function onFaceFilesSelected(files) {
     }
     const file = files[i];
     const formData = new FormData();
+    formData.append('image', file);
     formData.append('file', file);
 
     try {
@@ -1642,9 +1390,10 @@ async function onFaceFilesSelected(files) {
         body: formData
       });
       const data = await res.json();
-      if (data.success) {
+      if (data.status === 'ok' || data.success) {
         showFaceStatus(`${file.name}: Registrado exitosamente`, 'success');
         await loadGuestFaces(currentFaceGuestId);
+        await loadGuests();
       } else {
         showFaceStatus(`${file.name}: ${data.error || 'No se detectó rostro'}`, 'error');
       }
@@ -1663,9 +1412,10 @@ async function deleteFace(imageId) {
       method: 'DELETE'
     });
     const data = await res.json();
-    if (data.status === 'ok') {
+    if (data.status === 'ok' || data.success) {
       showFaceStatus('Foto eliminada.', 'info');
       await loadGuestFaces(currentFaceGuestId);
+      await loadGuests();
     } else {
       showFaceStatus(`Error eliminando foto: ${data.error}`, 'error');
     }
@@ -2172,7 +1922,6 @@ async function loadAuditLogs() {
 }
 
 loadKioskSettings();
-loadDocuments();
 loadPrinterStatus();
 loadGuests();
 

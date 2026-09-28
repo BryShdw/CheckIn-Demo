@@ -10,6 +10,7 @@ from app.config import Config
 from app.extensions import db, csrf
 from app.models.guest import Guest
 from app.models.checkin import Checkin
+from app.models.face_profile import FaceProfile
 from app.services.guest_service import (
     get_or_create_active_event,
     get_kiosk_settings,
@@ -315,34 +316,55 @@ def api_facial_match():
     })
 
 
-@api_bp.route("/guest/<guest_id>/face", methods=["POST"])
+@api_bp.route("/guest/<path:guest_id>/faces", methods=["GET"])
+def api_get_guest_faces(guest_id):
+    """Devuelve la galería de fotos enroladas para un invitado desde MySQL."""
+    event = get_or_create_active_event()
+    guest = find_guest(guest_id, event.id)
+    if not guest:
+        return jsonify({"error": f"Invitado con ID '{guest_id}' no encontrado", "faces": []}), 404
+
+    profiles = FaceProfile.query.filter_by(guest_id=guest.id).order_by(FaceProfile.id.asc()).all()
+    return jsonify({
+        "status": "ok",
+        "success": True,
+        "faces": [p.to_dict() for p in profiles],
+        "count": len(profiles),
+    })
+
+
+@api_bp.route("/guest/<path:guest_id>/face", methods=["POST"])
 def api_enroll_guest_face(guest_id):
-    guest = find_guest(guest_id)
+    event = get_or_create_active_event()
+    guest = find_guest(guest_id, event.id)
     if not guest:
         return jsonify({"error": f"Invitado con ID '{guest_id}' no encontrado"}), 404
 
     img_bgr = None
-    if "image" in request.files:
-        file = request.files["image"]
+    file = request.files.get("image") or request.files.get("file")
+    if file:
         img_bytes = file.read()
         np_arr = np.frombuffer(img_bytes, np.uint8)
         img_bgr = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
     else:
         data = request.get_json() or {}
-        image_b64 = data.get("image")
+        image_b64 = data.get("image") or data.get("image_base64") or data.get("image_data")
         if image_b64:
             if "," in image_b64:
                 image_b64 = image_b64.split(",", 1)[1]
-            img_bytes = base64.b64decode(image_b64)
-            np_arr = np.frombuffer(img_bytes, np.uint8)
-            img_bgr = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+            try:
+                img_bytes = base64.b64decode(image_b64)
+                np_arr = np.frombuffer(img_bytes, np.uint8)
+                img_bgr = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+            except Exception as e:
+                return jsonify({"error": f"Error decodificando imagen base64: {e}"}), 400
 
     if img_bgr is None or img_bgr.size == 0:
         return jsonify({"error": "No se recibió una imagen válida"}), 400
 
     ok, msg, profile_dict = enroll_guest_face(guest, img_bgr)
     if not ok:
-        return jsonify({"error": msg}), 400
+        return jsonify({"error": msg, "success": False}), 400
 
     user_id = current_user.id if current_user.is_authenticated else None
     log_audit("FACE_ENROLL", user_id=user_id, target_type="GUEST", target_id=guest.guest_code,
@@ -350,15 +372,17 @@ def api_enroll_guest_face(guest_id):
 
     return jsonify({
         "status": "ok",
+        "success": True,
         "message": msg,
         "face": profile_dict,
         "guest": guest.to_dict(),
     })
 
 
-@api_bp.route("/guest/<guest_id>/face", methods=["DELETE"])
+@api_bp.route("/guest/<path:guest_id>/face", methods=["DELETE"])
 def api_delete_guest_face_route(guest_id):
-    guest = find_guest(guest_id)
+    event = get_or_create_active_event()
+    guest = find_guest(guest_id, event.id)
     if not guest:
         return jsonify({"error": f"Invitado con ID '{guest_id}' no encontrado"}), 404
 
@@ -371,6 +395,7 @@ def api_delete_guest_face_route(guest_id):
 
     return jsonify({
         "status": "ok",
+        "success": True,
         "message": "Fotos faciales eliminadas.",
         "guest": guest.to_dict(),
     })
@@ -383,15 +408,24 @@ def api_delete_all_faces():
     log_audit("FACE_PURGE_ALL", user_id=user_id, details=f"Eliminadas todas las fotos faciales ({res['deleted_count']} perfiles)", ip_address=request.remote_addr)
     return jsonify({
         "status": "ok",
+        "success": True,
         "message": f"Se han eliminado todas las fotos de enrolamiento ({res.get('deleted_count', 0)} perfiles reseteados).",
         "deleted_count": res.get("deleted_count", 0),
     })
 
 
-@api_bp.route("/face-image/<guest_id>/<filename>")
+@api_bp.route("/face-image/<path:guest_id>/<filename>")
 def api_serve_face_image(guest_id, filename):
-    guest_dir = Config.FACE_IMAGES_DIR / guest_id
-    return send_from_directory(guest_dir, filename)
+    image_id = filename.replace(".jpg", "").replace("_aligned", "")
+    profile = FaceProfile.query.filter((FaceProfile.filename == filename) | (FaceProfile.thumb_filename == filename) | (FaceProfile.image_id == image_id)).first()
+    if profile and profile.thumb_data and "base64," in profile.thumb_data:
+        try:
+            raw_b64 = profile.thumb_data.split("base64,")[1]
+            img_bytes = base64.b64decode(raw_b64)
+            return send_file(io.BytesIO(img_bytes), mimetype="image/jpeg")
+        except Exception:
+            pass
+    return jsonify({"error": "Imagen no disponible"}), 404
 
 
 # ── Hardware e Impresión ────────────────────────────────────────────────────
