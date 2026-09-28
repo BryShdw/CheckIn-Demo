@@ -9,7 +9,7 @@ class KioskSetting(db.Model):
     event_id = db.Column(db.Integer, db.ForeignKey("events.id", ondelete="CASCADE"), nullable=True, unique=True)
     scan_method = db.Column(db.String(20), default="both", nullable=False)  # both, facial, qr
     operation_mode = db.Column(db.String(20), default="manual", nullable=False)  # manual, auto
-    face_threshold = db.Column(db.Float, default=0.55, nullable=False)
+    face_threshold = db.Column(db.Float, default=0.70, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
     def to_dict(self) -> dict:

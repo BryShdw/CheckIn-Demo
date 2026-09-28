@@ -17,21 +17,84 @@ from app.services.guest_service import get_or_create_active_event
 log = logging.getLogger(__name__)
 
 
-def transform_onedrive_url(raw_url: str) -> str:
-    """Convierte un enlace compartido de OneDrive / SharePoint al endpoint de descarga directa."""
-    raw_url = raw_url.strip()
-    if not raw_url:
-        return ""
+def decode_onedrive_share_token(url: str) -> str | None:
+    """Extrae y decodifica la URL original de un token shares/u! en api.onedrive.com o graph."""
+    if "/shares/u!" in url:
+        try:
+            token = url.split("/shares/u!")[1].split("/")[0]
+            padded = token.replace("_", "/").replace("-", "+")
+            padded += "=" * ((4 - len(padded) % 4) % 4)
+            return base64.b64decode(padded).decode("utf-8")
+        except Exception:
+            return None
+    return None
 
-    if "api.onedrive.com" in raw_url:
-        return raw_url
 
-    if "1drv.ms" in raw_url or "sharepoint.com" in raw_url or "onedrive.live.com" in raw_url:
-        encoded = base64.b64encode(raw_url.encode("utf-8")).decode("utf-8")
+def build_onedrive_candidates(raw_url: str) -> list[str]:
+    """Genera una lista ordenada de URLs de descarga directa para OneDrive / SharePoint."""
+    url = raw_url.strip()
+    if not url:
+        return []
+
+    candidates = []
+
+    # 1. Si viene como endpoint ya transformado de api.onedrive.com o graph.microsoft.com
+    decoded_url = decode_onedrive_share_token(url)
+    if decoded_url:
+        if "sharepoint.com" in decoded_url:
+            base = decoded_url.split("?")[0]
+            candidates.append(f"{base}?download=1")
+            candidates.append(decoded_url)
+        elif "onedrive.live.com" in decoded_url or "1drv.ms" in decoded_url:
+            base = decoded_url.split("?")[0]
+            candidates.append(f"{base}?download=1")
+
+    # 2. Si es un enlace directo de SharePoint (ej. *.sharepoint.com/:x:/g/personal/...)
+    if "sharepoint.com" in url:
+        base = url.split("?")[0]
+        candidates.append(f"{base}?download=1")
+        if url not in candidates:
+            candidates.append(url)
+
+    # 3. Si es un enlace corto de 1drv.ms
+    if "1drv.ms" in url:
+        try:
+            head_resp = requests.head(url, allow_redirects=True, timeout=5,
+                                      headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
+            target = head_resp.url
+            if "sharepoint.com" in target:
+                base = target.split("?")[0]
+                candidates.append(f"{base}?download=1")
+            elif "onedrive.live.com" in target:
+                base = target.split("?")[0]
+                candidates.append(f"{base}?download=1")
+        except Exception:
+            pass
+
+    # 4. Si es onedrive.live.com
+    if "onedrive.live.com" in url:
+        base = url.split("?")[0]
+        candidates.append(f"{base}?download=1")
+
+    # 5. Endpoint de OneDrive Personal API (para cuentas Microsoft personales)
+    try:
+        encoded = base64.b64encode(url.encode("utf-8")).decode("utf-8")
         clean_encoded = encoded.rstrip("=").replace("/", "_").replace("+", "-")
-        return f"https://api.onedrive.com/v1.0/shares/u!{clean_encoded}/root/content"
+        candidates.append(f"https://api.onedrive.com/v1.0/shares/u!{clean_encoded}/root/content")
+    except Exception:
+        pass
 
-    return raw_url
+    # 6. La URL original como último recurso
+    if url not in candidates:
+        candidates.append(url)
+
+    return list(dict.fromkeys(candidates))
+
+
+def transform_onedrive_url(raw_url: str) -> str:
+    """Convierte un enlace compartido de OneDrive / SharePoint al endpoint de descarga directa preferido."""
+    candidates = build_onedrive_candidates(raw_url)
+    return candidates[0] if candidates else raw_url
 
 
 def parse_csv_stream(content: str) -> list[dict]:
@@ -223,23 +286,54 @@ def sync_onedrive_link(raw_url: str, event_id: int | None = None) -> tuple[bool,
         if not event:
             return False, "Evento no encontrado", 0
 
-    direct_url = transform_onedrive_url(raw_url)
-    log.info(f"Sincronizando enlace OneDrive para evento '{event.name}': {direct_url}")
+    candidates = build_onedrive_candidates(raw_url)
+    log.info(f"Sincronizando enlace OneDrive para evento '{event.name}'. {len(candidates)} candidatos a probar.")
+
+    session = requests.Session()
+    session.headers.update({
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+        "Accept-Language": "es-ES,es;q=0.9,en;q=0.8",
+    })
+
+    raw_bytes = None
+    last_error_detail = ""
+
+    for candidate_url in candidates:
+        try:
+            log.info(f"Probando descarga desde: {candidate_url}")
+            resp = session.get(candidate_url, timeout=20, allow_redirects=True)
+
+            if resp.status_code == 200 and resp.content:
+                content_preview = resp.content[:400]
+                # Detectar JSON de error o migración de Microsoft
+                if b'"error"' in content_preview and (b'userContentMigrated' in content_preview or b'generalException' in content_preview):
+                    log.warning(f"Candidato devolvió JSON de error de Microsoft: {candidate_url}")
+                    continue
+
+                # Detectar si es un Excel binario o un texto con comas/puntos y coma
+                if resp.content.startswith(b"PK\x03\x04") or b"," in content_preview or b";" in content_preview or b"\t" in content_preview:
+                    raw_bytes = resp.content
+                    log.info(f"Descarga exitosa desde: {candidate_url} ({len(raw_bytes)} bytes)")
+                    break
+            else:
+                last_error_detail = f"HTTP {resp.status_code}"
+                log.warning(f"Candidato {candidate_url} devolvió código {resp.status_code}")
+        except Exception as e:
+            last_error_detail = str(e)
+            log.warning(f"Excepción al descargar candidato {candidate_url}: {e}")
+
+    if not raw_bytes:
+        return False, f"No se pudo descargar el archivo desde OneDrive / SharePoint ({last_error_detail or 'Respuesta inválida'}). Asegúrate de que el archivo compartido tenga permisos de 'Cualquier persona con el vínculo puede ver'.", 0
 
     try:
-        resp = requests.get(direct_url, timeout=18, allow_redirects=True)
-        if resp.status_code != 200:
-            return False, f"El servidor de OneDrive respondió con error HTTP {resp.status_code}.", 0
-
-        raw_bytes = resp.content
         parsed = []
-
-        # Determinar si es Excel o CSV
-        if raw_bytes.startswith(b"PK\x03\x04") or "spreadsheet" in resp.headers.get("Content-Type", ""):
+        # Determinar si es Excel (.xlsx) o CSV
+        if raw_bytes.startswith(b"PK\x03\x04"):
             parsed = parse_excel_file(raw_bytes)
         else:
             text = ""
-            for enc in ("utf-8-sig", "utf-8", "cp1252", "latin-1"):
+            for enc in ("utf-8-sig", "utf-8", "cp1252", "latin-1", "iso-8859-1"):
                 try:
                     text = raw_bytes.decode(enc)
                     break
@@ -248,7 +342,7 @@ def sync_onedrive_link(raw_url: str, event_id: int | None = None) -> tuple[bool,
             parsed = parse_csv_stream(text)
 
         if not parsed:
-            return False, "El archivo descargado de OneDrive está vacío o no tiene columnas reconocibles.", 0
+            return False, "El archivo descargado está vacío o no tiene columnas reconocibles (Código, Nombre, etc.).", 0
 
         # Guardar en caché local de respaldo
         Config.ONEDRIVE_CACHES_DIR.mkdir(parents=True, exist_ok=True)
@@ -256,7 +350,7 @@ def sync_onedrive_link(raw_url: str, event_id: int | None = None) -> tuple[bool,
         cache_path = Config.ONEDRIVE_CACHES_DIR / cache_name
         cache_path.write_bytes(raw_bytes)
 
-        # Actualizar evento
+        # Actualizar evento en BD
         event.onedrive_url = raw_url
         event.cache_filename = cache_name
         event.last_sync = datetime.utcnow()
@@ -265,8 +359,8 @@ def sync_onedrive_link(raw_url: str, event_id: int | None = None) -> tuple[bool,
         return True, f"Sincronización exitosa: {len(parsed)} invitados procesados ({ins} nuevos, {upd} actualizados).", len(parsed)
 
     except Exception as e:
-        log.error(f"Error sincronizando OneDrive: {e}")
-        return False, f"Error al conectar con OneDrive: {e}", 0
+        log.error(f"Error parseando archivo descargado: {e}")
+        return False, f"Error al procesar los datos del archivo descargado: {e}", 0
 
 
 def migrate_legacy_data():

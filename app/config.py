@@ -48,4 +48,4 @@ class Config:
 
     # Kiosk Defaults
     DEFAULT_EVENT_NAME = os.getenv("DEFAULT_EVENT_NAME", "EVENTO DEMO 2026")
-    DEFAULT_FACE_THRESHOLD = float(os.getenv("FACE_THRESHOLD", "0.55"))
+    DEFAULT_FACE_THRESHOLD = float(os.getenv("FACE_THRESHOLD", "0.70"))

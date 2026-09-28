@@ -705,7 +705,7 @@
 let currentGuest        = null;
 let currentMode         = 'manual'; // 'manual' | 'auto' (controlado desde /admin)
 let scanMethod          = 'both';   // 'both' | 'facial' | 'qr' (controlado desde /admin)
-let faceThreshold       = 0.55;     // (controlado desde /admin)
+let faceThreshold       = 0.70;     // (controlado desde /admin)
 let scanning            = false;
 let cameraStream        = null;
 let lastScannedCode     = null;
@@ -752,7 +752,7 @@ async function syncKioskSettings() {
     if (data.status === 'ok' && data.settings) {
       scanMethod    = data.settings.method || 'both';
       currentMode   = data.settings.mode || 'manual';
-      faceThreshold = data.settings.face_threshold || 0.55;
+      faceThreshold = data.settings.face_threshold || 0.70;
       updateInstructionUI();
     }
   } catch (err) {

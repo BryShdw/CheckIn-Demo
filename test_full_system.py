@@ -176,6 +176,15 @@ def run_tests():
     assert import_data["total"] >= 1
     print(f"[OK] Importación de archivo Excel procesada en MySQL exitosamente ({import_data['message']}).")
 
+    # 9c. Probar Importación desde Enlace OneDrive / SharePoint
+    onedrive_test_url = "https://api.onedrive.com/v1.0/shares/u!aHR0cHM6Ly9kYWNlcjE5ODQtbXkuc2hhcmVwb2ludC5jb20vOng6L2cvcGVyc29uYWwvYnJheWFuX2RlbGdhZG9fZGFjZXJfY29tX3BlL0lRREkxVVlrcVZIR1FJUTZPQUJITWhJS0FlWlFwbGlmZXJ0WFZzN2hhcWtFRk9VP2U9Q0ZzTldI/root/content"
+    res = client.post("/admin/api/import/onedrive", json={"url": onedrive_test_url})
+    assert res.status_code == 200, f"Error esperado 200 pero recibido {res.status_code}: {res.get_data(as_text=True)}"
+    od_data = res.get_json()
+    assert od_data["status"] == "ok"
+    assert od_data["count"] == 30
+    print(f"[OK] Importación desde enlace OneDrive/SharePoint exitosa: {od_data['count']} invitados importados a MySQL.")
+
     # 10. Probar Kiosko y API de Check-in
     res = client.get("/")
     assert res.status_code == 200
@@ -186,6 +195,12 @@ def run_tests():
     status_data = res.get_json()
     assert status_data["status"] == "ok"
     print(f"[OK] API /api/status funcionando (Evento: '{status_data['event_name']}').")
+
+    res = client.get("/api/kiosk-settings")
+    assert res.status_code == 200
+    k_data = res.get_json()
+    assert k_data["settings"]["face_threshold"] == 0.70
+    print(f"[OK] Umbral facial por defecto verificado en 0.70 ({k_data['settings']['face_threshold']}).")
 
     # Limpiar check-ins previos para prueba limpia y reproducible
     with app.app_context():

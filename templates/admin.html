@@ -322,16 +322,16 @@
           <label style="font-size:0.8rem; color:var(--muted); font-weight:700; text-transform:uppercase;">
             3. Umbral Facial (Sensibilidad)
           </label>
-          <span id="threshold-val-badge" style="font-size:0.85rem; font-weight:700; color:var(--accent);">0.55</span>
+          <span id="threshold-val-badge" style="font-size:0.85rem; font-weight:700; color:var(--accent);">0.70</span>
         </div>
         <div style="display:flex; align-items:center; gap:10px;">
-          <input type="range" id="admin-threshold-slider" min="0.45" max="0.75" step="0.01" value="0.55"
+          <input type="range" id="admin-threshold-slider" min="0.45" max="0.85" step="0.01" value="0.70"
                  oninput="onThresholdSliderInput(this.value)"
                  onchange="updateKioskSetting('face_threshold', parseFloat(this.value))"
                  style="flex:1; accent-color:var(--accent); cursor:pointer;">
         </div>
         <div style="font-size:0.73rem; color:var(--muted); margin-top:6px;">
-          <strong>0.55 (Recomendado):</strong> Balance ideal entre reconocimiento rápido al acercarse y especificidad sin confusiones.
+          <strong>0.70 (Recomendado):</strong> Máxima precisión y especificidad biométrica para evitar falsos positivos.
         </div>
       </div>
     </div>
