@@ -28,6 +28,8 @@ from app.services.printer_service import (
     get_printer_connection_status,
     purge_printer_queue,
     print_guest_ticket,
+    build_label_image,
+    DEFAULT_LABEL_TEMPLATE,
 )
 from app.services.face_service import delete_guest_face, delete_all_enrolled_faces
 from app.services.import_service import sync_onedrive_link, parse_excel_file, parse_csv_stream, save_parsed_guests_to_event
@@ -343,3 +345,100 @@ def admin_api_reset_checkins():
         "message": f"Se han reiniciado {count} registros de asistencia.",
         "reset_count": count,
     })
+
+
+# ── Editor y Personalización de Plantillas de Credencial ────────────────────
+
+def _get_sample_guest_data(event_id: int) -> dict:
+    guest = Guest.query.filter_by(event_id=event_id, is_active=True).first()
+    if guest:
+        return {
+            "id": guest.id,
+            "guest_code": guest.guest_code,
+            "full_name": guest.full_name,
+            "name": guest.full_name,
+            "company": guest.company or "EMPRESA DE EJEMPLO",
+            "position": guest.position or "DIRECTOR EJECUTIVO",
+            "category": guest.category or "VIP",
+            "event_id": event_id,
+        }
+    return {
+        "id": 1,
+        "guest_code": "ASIS-0001",
+        "full_name": "CARLOS EDUARDO MENDOZA SILVA",
+        "name": "CARLOS EDUARDO MENDOZA SILVA",
+        "company": "CORPORACIÓN TECNOLÓGICA",
+        "position": "GERENTE DE OPERACIONES",
+        "category": "VIP",
+        "event_id": event_id,
+    }
+
+
+@admin_bp.route("/api/label-template", methods=["GET"])
+def api_get_label_template():
+    event = get_or_create_active_event()
+    template = event.get_label_template()
+    sample_guest = _get_sample_guest_data(event.id)
+    return jsonify({
+        "status": "ok",
+        "template": template,
+        "default_template": DEFAULT_LABEL_TEMPLATE,
+        "sample_guest": sample_guest,
+    })
+
+
+@admin_bp.route("/api/label-template", methods=["POST"])
+def api_save_label_template():
+    event = get_or_create_active_event()
+    data = request.get_json() or {}
+    template = data.get("template")
+    if not isinstance(template, dict):
+        return jsonify({"error": "Estructura de plantilla no válida."}), 400
+
+    event.set_label_template(template)
+    db.session.commit()
+
+    user_id = current_user.id if current_user.is_authenticated else None
+    log_audit("LABEL_TEMPLATE_UPDATE", user_id=user_id, target_type="EVENT", target_id=str(event.id),
+              details=f"Plantilla de credencial actualizada para evento '{event.name}'", ip_address=request.remote_addr)
+
+    return jsonify({
+        "status": "ok",
+        "message": "Plantilla de credencial guardada correctamente.",
+        "template": event.get_label_template(),
+    })
+
+
+@admin_bp.route("/api/label-preview", methods=["POST"])
+def api_preview_label():
+    event = get_or_create_active_event()
+    data = request.get_json() or {}
+    template = data.get("template")
+    guest_data = data.get("guest") or _get_sample_guest_data(event.id)
+
+    img = build_label_image(guest_data, template=template)
+
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    buf.seek(0)
+    return send_file(buf, mimetype="image/png")
+
+
+@admin_bp.route("/api/label-template/test-print", methods=["POST"])
+def api_test_print_label():
+    event = get_or_create_active_event()
+    data = request.get_json() or {}
+    template = data.get("template")
+    guest_data = data.get("guest") or _get_sample_guest_data(event.id)
+
+    print_ok, print_msg = print_guest_ticket(guest_data, template=template)
+    user_id = current_user.id if current_user.is_authenticated else None
+    log_audit("LABEL_TEST_PRINT", user_id=user_id, target_type="EVENT", target_id=str(event.id),
+              details=f"Prueba de impresión de credencial. Resultado: {print_msg}", ip_address=request.remote_addr)
+
+    return jsonify({
+        "status": "ok" if print_ok else "error",
+        "success": print_ok,
+        "message": print_msg,
+    })
+

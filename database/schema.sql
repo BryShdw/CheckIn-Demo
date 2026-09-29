@@ -27,6 +27,7 @@ CREATE TABLE `events` (
   `end_date` DATETIME DEFAULT NULL,
   `is_active` TINYINT(1) NOT NULL DEFAULT 1,
   `onedrive_url` TEXT COLLATE utf8mb4_unicode_ci,
+  `label_template` TEXT COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `cache_filename` VARCHAR(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `last_sync` DATETIME DEFAULT NULL,
   `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,

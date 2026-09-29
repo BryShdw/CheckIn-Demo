@@ -46,6 +46,17 @@ def create_app(config_class=Config) -> Flask:
             db.create_all()
             log.info("Tablas de MySQL verificadas / creadas exitosamente.")
 
+            # Asegurar columna label_template en tabla events si no existía previamente
+            try:
+                from sqlalchemy import text
+                cols = [r[0] for r in db.session.execute(text("DESCRIBE events")).fetchall()]
+                if "label_template" not in cols:
+                    db.session.execute(text("ALTER TABLE events ADD COLUMN label_template TEXT NULL AFTER onedrive_url"))
+                    db.session.commit()
+                    log.info("Migración aplicada: columna 'label_template' agregada a tabla 'events'.")
+            except Exception as ex_col:
+                log.warning(f"Verificación de columna label_template: {ex_col}")
+
             # 2. Inicializar usuario Administrador por defecto (Admin / 000000)
             ensure_default_admin()
 

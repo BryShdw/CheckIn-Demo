@@ -140,6 +140,12 @@
 
         <!-- Botones secundarios limpios -->
         <div class="hidden lg:flex items-center gap-1 border-l border-slate-200 pl-2">
+          <button type="button" onclick="openLabelDesignerModal()" class="px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors flex items-center gap-1.5" title="Diseñar formato de impresión de credenciales">
+            <svg class="w-3.5 h-3.5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+            </svg>
+            <span>Diseñar Credencial</span>
+          </button>
           <button type="button" onclick="openEventsModal()" class="px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors">Eventos</button>
           <button type="button" onclick="openUsersModal()" class="px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors">Usuarios</button>
           <button type="button" onclick="openAuditModal()" class="px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors">Analítica</button>
@@ -184,6 +190,13 @@
         </div>
       </div>
       <div class="flex items-center gap-2 self-end sm:self-auto">
+        <button type="button" onclick="openLabelDesignerModal()" class="px-3 py-1.5 text-xs font-medium text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 rounded-lg shadow-xs transition-colors flex items-center gap-1.5" title="Personalizar campos y tamaño de impresión de credencial">
+          <svg class="w-3.5 h-3.5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+          </svg>
+          <span>Diseñar Credencial</span>
+        </button>
+
         <button type="button" id="btn-purge-queue" onclick="purgePrinterQueue()" style="display:none;" class="px-3 py-1.5 text-xs font-medium text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg transition-colors flex items-center gap-1.5">
           <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
@@ -826,6 +839,288 @@
 
       <div class="flex justify-end pt-2">
         <button type="button" onclick="closeAuditModal()" class="px-4 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors">Cerrar</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: EDITOR Y PERSONALIZACIÓN DE CREDENCIALES (BROTHER QL-800)           -->
+  <!-- ========================================================================= -->
+  <div class="modal-backdrop" id="label-designer-modal">
+    <div class="bg-white border border-slate-200 rounded-2xl shadow-2xl w-full max-w-5xl p-6 space-y-4 flex flex-col max-h-[92vh]">
+      
+      <!-- Cabecera del Modal -->
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100 shrink-0">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+            </svg>
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-slate-900">Diseño y Configuración de Credencial</h3>
+            <p class="text-xs text-slate-500">Personaliza la tipografía, campos y elementos impresos en la Brother QL-800 (DK-1208 38mm × 90.3mm)</p>
+          </div>
+        </div>
+        <button type="button" onclick="closeLabelDesignerModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <!-- Contenido en 2 Columnas -->
+      <div class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 overflow-hidden min-h-0">
+        
+        <!-- Columna Izquierda: Formulario de Configuración (Scrollable) -->
+        <div class="lg:col-span-7 overflow-y-auto pr-2 space-y-4 text-xs">
+          
+          <!-- Bloque 1: Campos de Texto -->
+          <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3.5">
+            <div class="flex items-center justify-between pb-2 border-b border-slate-200/80">
+              <span class="font-bold text-slate-800 uppercase tracking-wider text-[11px]">Campos de Información y Tipografía</span>
+              <span class="text-slate-400 text-[10px]">Ajustes de texto a 300 DPI</span>
+            </div>
+
+            <!-- 1. Encabezado / Título de Evento -->
+            <div class="space-y-2 p-2.5 rounded-lg bg-white border border-slate-200/80">
+              <div class="flex items-center justify-between">
+                <label class="inline-flex items-center gap-2 cursor-pointer font-semibold text-slate-800">
+                  <input type="checkbox" id="lbl-header-enabled" onchange="triggerLabelPreviewDebounced()" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+                  <span>Encabezado / Nombre de Evento</span>
+                </label>
+                <div class="flex items-center gap-2">
+                  <label class="inline-flex items-center gap-1 cursor-pointer text-slate-600 text-[11px]">
+                    <input type="checkbox" id="lbl-header-bold" onchange="triggerLabelPreviewDebounced()" checked class="rounded border-slate-300 text-blue-600">
+                    <span>Negrita</span>
+                  </label>
+                </div>
+              </div>
+              <div id="lbl-header-fields" class="space-y-2 pt-1">
+                <input type="text" id="lbl-header-text" oninput="triggerLabelPreviewDebounced()" placeholder="Ej. SUMMIT INTERNACIONAL 2026" class="w-full px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-900 uppercase">
+                <div class="flex items-center gap-3">
+                  <span class="text-slate-500 text-[11px] w-24">Tamaño: <b id="lbl-header-size-val">22</b>px</span>
+                  <input type="range" id="lbl-header-size" min="16" max="36" value="22" oninput="document.getElementById('lbl-header-size-val').textContent = this.value; triggerLabelPreviewDebounced();" class="flex-1 accent-blue-600">
+                </div>
+              </div>
+            </div>
+
+            <!-- 2. Nombre Completo -->
+            <div class="space-y-2 p-2.5 rounded-lg bg-white border border-slate-200/80">
+              <div class="flex items-center justify-between">
+                <label class="inline-flex items-center gap-2 cursor-pointer font-semibold text-slate-800">
+                  <input type="checkbox" id="lbl-name-enabled" onchange="triggerLabelPreviewDebounced()" checked class="rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+                  <span>Nombre del Invitado</span>
+                </label>
+                <div class="flex items-center gap-3">
+                  <label class="inline-flex items-center gap-1 cursor-pointer text-slate-600 text-[11px]">
+                    <input type="checkbox" id="lbl-name-bold" onchange="triggerLabelPreviewDebounced()" checked class="rounded border-slate-300 text-blue-600">
+                    <span>Negrita</span>
+                  </label>
+                  <label class="inline-flex items-center gap-1 cursor-pointer text-slate-600 text-[11px]" title="Si el nombre es largo, se divide en 2 líneas de forma balanceada">
+                    <input type="checkbox" id="lbl-name-multiline" onchange="triggerLabelPreviewDebounced()" checked class="rounded border-slate-300 text-blue-600">
+                    <span>Auto 2 líneas</span>
+                  </label>
+                </div>
+              </div>
+              <div class="flex items-center gap-3 pt-1">
+                <span class="text-slate-500 text-[11px] w-24">Tamaño: <b id="lbl-name-size-val">54</b>px</span>
+                <input type="range" id="lbl-name-size" min="32" max="68" value="54" oninput="document.getElementById('lbl-name-size-val').textContent = this.value; triggerLabelPreviewDebounced();" class="flex-1 accent-blue-600">
+              </div>
+            </div>
+
+            <!-- 3. Empresa / Organización -->
+            <div class="space-y-2 p-2.5 rounded-lg bg-white border border-slate-200/80">
+              <div class="flex items-center justify-between">
+                <label class="inline-flex items-center gap-2 cursor-pointer font-semibold text-slate-800">
+                  <input type="checkbox" id="lbl-comp-enabled" onchange="triggerLabelPreviewDebounced()" checked class="rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+                  <span>Empresa / Organización</span>
+                </label>
+                <label class="inline-flex items-center gap-1 cursor-pointer text-slate-600 text-[11px]">
+                  <input type="checkbox" id="lbl-comp-bold" onchange="triggerLabelPreviewDebounced()" checked class="rounded border-slate-300 text-blue-600">
+                  <span>Negrita</span>
+                </label>
+              </div>
+              <div class="flex items-center gap-3 pt-1">
+                <span class="text-slate-500 text-[11px] w-24">Tamaño: <b id="lbl-comp-size-val">32</b>px</span>
+                <input type="range" id="lbl-comp-size" min="18" max="44" value="32" oninput="document.getElementById('lbl-comp-size-val').textContent = this.value; triggerLabelPreviewDebounced();" class="flex-1 accent-blue-600">
+              </div>
+            </div>
+
+            <!-- 4. Cargo / Puesto -->
+            <div class="space-y-2 p-2.5 rounded-lg bg-white border border-slate-200/80">
+              <div class="flex items-center justify-between">
+                <label class="inline-flex items-center gap-2 cursor-pointer font-semibold text-slate-800">
+                  <input type="checkbox" id="lbl-pos-enabled" onchange="triggerLabelPreviewDebounced()" checked class="rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+                  <span>Cargo / Puesto de Trabajo</span>
+                </label>
+                <label class="inline-flex items-center gap-1 cursor-pointer text-slate-600 text-[11px]">
+                  <input type="checkbox" id="lbl-pos-bold" onchange="triggerLabelPreviewDebounced()" class="rounded border-slate-300 text-blue-600">
+                  <span>Negrita</span>
+                </label>
+              </div>
+              <div class="flex items-center gap-3 pt-1">
+                <span class="text-slate-500 text-[11px] w-24">Tamaño: <b id="lbl-pos-size-val">26</b>px</span>
+                <input type="range" id="lbl-pos-size" min="16" max="38" value="26" oninput="document.getElementById('lbl-pos-size-val').textContent = this.value; triggerLabelPreviewDebounced();" class="flex-1 accent-blue-600">
+              </div>
+            </div>
+
+            <!-- 5. Categoría (VIP, General, etc.) -->
+            <div class="space-y-2 p-2.5 rounded-lg bg-white border border-slate-200/80">
+              <div class="flex items-center justify-between">
+                <label class="inline-flex items-center gap-2 cursor-pointer font-semibold text-slate-800">
+                  <input type="checkbox" id="lbl-cat-enabled" onchange="triggerLabelPreviewDebounced()" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+                  <span>Categoría (VIP, Speaker, General)</span>
+                </label>
+                <label class="inline-flex items-center gap-1 cursor-pointer text-slate-600 text-[11px]">
+                  <input type="checkbox" id="lbl-cat-bold" onchange="triggerLabelPreviewDebounced()" checked class="rounded border-slate-300 text-blue-600">
+                  <span>Negrita</span>
+                </label>
+              </div>
+              <div class="flex items-center gap-3 pt-1">
+                <span class="text-slate-500 text-[11px] w-24">Tamaño: <b id="lbl-cat-size-val">22</b>px</span>
+                <input type="range" id="lbl-cat-size" min="14" max="32" value="22" oninput="document.getElementById('lbl-cat-size-val').textContent = this.value; triggerLabelPreviewDebounced();" class="flex-1 accent-blue-600">
+              </div>
+            </div>
+
+            <!-- 6. Código de Invitado / ID -->
+            <div class="space-y-2 p-2.5 rounded-lg bg-white border border-slate-200/80">
+              <div class="flex items-center justify-between">
+                <label class="inline-flex items-center gap-2 cursor-pointer font-semibold text-slate-800">
+                  <input type="checkbox" id="lbl-code-enabled" onchange="triggerLabelPreviewDebounced()" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+                  <span>Código de Invitado (ID)</span>
+                </label>
+                <label class="inline-flex items-center gap-1 cursor-pointer text-slate-600 text-[11px]">
+                  <input type="checkbox" id="lbl-code-bold" onchange="triggerLabelPreviewDebounced()" class="rounded border-slate-300 text-blue-600">
+                  <span>Negrita</span>
+                </label>
+              </div>
+              <div class="flex items-center gap-3 pt-1">
+                <span class="text-slate-500 text-[11px] w-24">Tamaño: <b id="lbl-code-size-val">20</b>px</span>
+                <input type="range" id="lbl-code-size" min="14" max="30" value="20" oninput="document.getElementById('lbl-code-size-val').textContent = this.value; triggerLabelPreviewDebounced();" class="flex-1 accent-blue-600">
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Bloque 2: Disposición, QR y Espaciado -->
+          <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3.5">
+            <div class="flex items-center justify-between pb-2 border-b border-slate-200/80">
+              <span class="font-bold text-slate-800 uppercase tracking-wider text-[11px]">Disposición, Código QR y Espaciado</span>
+            </div>
+
+            <!-- Alineación y Código QR -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <!-- Alineación -->
+              <div class="p-2.5 rounded-lg bg-white border border-slate-200/80 space-y-2">
+                <span class="block font-semibold text-slate-800">Alineación del Texto</span>
+                <div class="flex gap-2">
+                  <button type="button" id="btn-align-center" onclick="setLabelAlign('center')" class="flex-1 py-1 px-2 rounded-lg border border-slate-200 bg-slate-100 font-semibold text-slate-800 transition-colors">Centro</button>
+                  <button type="button" id="btn-align-left" onclick="setLabelAlign('left')" class="flex-1 py-1 px-2 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition-colors">Izquierda</button>
+                </div>
+              </div>
+
+              <!-- Código QR Opcional -->
+              <div class="p-2.5 rounded-lg bg-white border border-slate-200/80 space-y-2">
+                <div class="flex items-center justify-between">
+                  <label class="inline-flex items-center gap-2 cursor-pointer font-semibold text-slate-800">
+                    <input type="checkbox" id="lbl-qr-enabled" onchange="triggerLabelPreviewDebounced()" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+                    <span>Imprimir Código QR</span>
+                  </label>
+                </div>
+                <div class="flex items-center gap-2">
+                  <select id="lbl-qr-position" onchange="triggerLabelPreviewDebounced()" class="w-full px-2 py-1 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-800">
+                    <option value="right">Ubicación: Derecha</option>
+                    <option value="left">Ubicación: Izquierda</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Sliders de Ajuste Fino -->
+            <div class="p-2.5 rounded-lg bg-white border border-slate-200/80 space-y-3">
+              <!-- Espaciado entre líneas -->
+              <div class="flex items-center gap-3">
+                <span class="text-slate-600 text-[11px] w-36">Separación entre líneas: <b id="lbl-spacing-val">14</b>px</span>
+                <input type="range" id="lbl-spacing" min="6" max="26" value="14" oninput="document.getElementById('lbl-spacing-val').textContent = this.value; triggerLabelPreviewDebounced();" class="flex-1 accent-blue-600">
+              </div>
+
+              <!-- Compensación vertical (si hay membrete) -->
+              <div class="flex items-center gap-3" title="Mueve todo el texto hacia arriba o hacia abajo si la credencial física ya incluye un logo pre-impreso">
+                <span class="text-slate-600 text-[11px] w-36">Ajuste vertical: <b id="lbl-voffset-val">0</b>px</span>
+                <input type="range" id="lbl-voffset" min="-50" max="50" value="0" oninput="document.getElementById('lbl-voffset-val').textContent = (this.value > 0 ? '+' : '') + this.value; triggerLabelPreviewDebounced();" class="flex-1 accent-blue-600">
+              </div>
+
+              <!-- Tamaño del QR (si está activo) -->
+              <div id="lbl-qr-size-container" style="display:none;" class="flex items-center gap-3">
+                <span class="text-slate-600 text-[11px] w-36">Tamaño de QR: <b id="lbl-qrsize-val">130</b>px</span>
+                <input type="range" id="lbl-qrsize" min="80" max="180" value="130" oninput="document.getElementById('lbl-qrsize-val').textContent = this.value; triggerLabelPreviewDebounced();" class="flex-1 accent-blue-600">
+              </div>
+            </div>
+
+            <!-- Botón Restablecer -->
+            <div class="flex justify-between items-center pt-1">
+              <button type="button" onclick="resetToDefaultLabelTemplate()" class="text-slate-500 hover:text-slate-800 underline text-[11px] transition-colors">
+                Restablecer valores predeterminados
+              </button>
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- Columna Derecha: Vista Previa y Botones de Acción -->
+        <div class="lg:col-span-5 flex flex-col justify-between space-y-4">
+          
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-slate-800 uppercase tracking-wider text-[11px]">Vista Previa en Tiempo Real</span>
+              <span id="label-preview-loading" class="text-blue-600 text-[11px] font-medium" style="display:none;">Actualizando...</span>
+            </div>
+
+            <!-- Contenedor de la credencial física -->
+            <div class="bg-slate-100/90 border border-slate-200 rounded-xl p-3 flex flex-col items-center justify-center">
+              <div class="w-full bg-white rounded-lg border border-slate-300 shadow-sm p-1.5 flex items-center justify-center min-h-[170px] relative">
+                <img id="label-preview-img" src="" alt="Vista Previa Credencial" class="w-full h-auto object-contain rounded">
+              </div>
+              <div class="flex items-center justify-between w-full mt-2 px-1 text-[11px] text-slate-500">
+                <span>Brother DK-1208 (38mm × 90.3mm)</span>
+                <span>300 DPI</span>
+              </div>
+            </div>
+
+            <!-- Selector de Invitado de Prueba -->
+            <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5">
+              <label for="lbl-sample-guest-select" class="block font-semibold text-slate-700 text-[11px] uppercase tracking-wider">Probar con Invitado:</label>
+              <select id="lbl-sample-guest-select" onchange="changeSampleGuestForPreview(this.value)" class="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg text-slate-800">
+                <option value="default">Invitado de muestra estándar</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Botones de Acción Finales -->
+          <div class="space-y-2 pt-3 border-t border-slate-100">
+            <button type="button" id="btn-test-print-label" onclick="testPrintLabelTemplate()" class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 rounded-xl shadow-xs transition-colors">
+              <svg class="w-4 h-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+              </svg>
+              <span>Imprimir Etiqueta de Prueba</span>
+            </button>
+
+            <div class="flex items-center gap-2">
+              <button type="button" onclick="closeLabelDesignerModal()" class="flex-1 px-4 py-2 text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors">
+                Cerrar
+              </button>
+              <button type="button" id="btn-save-label-template" onclick="saveLabelTemplate()" class="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-xs transition-colors">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+                <span>Guardar Plantilla</span>
+              </button>
+            </div>
+          </div>
+
+        </div>
+
       </div>
 
     </div>
@@ -1492,12 +1787,13 @@
 
         gal.innerHTML = '';
         faces.forEach((f, idx) => {
-          const imgSrc = f.thumb_url || f.url || f.image_url || f.thumb_data;
+          const imgSrc = f.thumb_data || f.thumb_url || f.image_url || f.url || '';
+          if (!imgSrc) return;
           const imageId = f.image_id || f.id;
           const card = document.createElement('div');
           card.className = 'relative rounded-lg overflow-hidden border border-slate-200 bg-slate-100 aspect-square group shadow-xs';
           card.innerHTML = `
-            <img src="${imgSrc}" class="w-full h-full object-cover" alt="Foto ${idx + 1}">
+            <img src="${imgSrc}" class="w-full h-full object-cover" alt="Foto ${idx + 1}" onerror="this.style.display='none'">
             <button type="button" onclick="deleteFace('${imageId}')" class="absolute top-1 right-1 w-5 h-5 rounded-full bg-rose-600 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-rose-700 shadow-xs" title="Eliminar foto">
               <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
@@ -1974,6 +2270,342 @@
         });
       } catch (err) {
         console.warn('Error cargando logs:', err);
+      }
+    }
+
+    // ── Editor y Diseñador de Credenciales Brother QL-800 ─────────────────────
+    let currentLabelTemplate = null;
+    let defaultLabelTemplate = null;
+    let sampleGuestData = null;
+    let labelPreviewDebounceTimer = null;
+    let labelAlignMode = 'center';
+
+    async function openLabelDesignerModal() {
+      const modal = document.getElementById('label-designer-modal');
+      if (!modal) return;
+      modal.classList.add('open');
+
+      // Cargar lista de invitados en el selector de pruebas
+      populateSampleGuestSelector();
+
+      // Cargar plantilla desde API
+      await loadLabelTemplateData();
+    }
+
+    function closeLabelDesignerModal() {
+      const modal = document.getElementById('label-designer-modal');
+      if (modal) modal.classList.remove('open');
+    }
+
+    function populateSampleGuestSelector() {
+      const sel = document.getElementById('lbl-sample-guest-select');
+      if (!sel) return;
+
+      sel.innerHTML = '<option value="default">Invitado de muestra estándar</option>';
+
+      if (Array.isArray(allGuests) && allGuests.length > 0) {
+        allGuests.slice(0, 15).forEach(g => {
+          const opt = document.createElement('option');
+          opt.value = g.id || g.guest_code;
+          const name = g.full_name || g.name || 'Sin nombre';
+          const comp = g.company ? ` (${g.company})` : '';
+          opt.textContent = `${name}${comp}`;
+          sel.appendChild(opt);
+        });
+      }
+    }
+
+    function changeSampleGuestForPreview(val) {
+      if (val === 'default') {
+        sampleGuestData = null;
+      } else if (Array.isArray(allGuests)) {
+        const found = allGuests.find(g => String(g.id) === String(val) || String(g.guest_code) === String(val));
+        if (found) {
+          sampleGuestData = {
+            id: found.id,
+            guest_code: found.guest_code,
+            full_name: found.full_name || found.name,
+            name: found.full_name || found.name,
+            company: found.company || '',
+            position: found.position || '',
+            category: found.category || 'GENERAL',
+          };
+        }
+      }
+      triggerLabelPreviewDebounced(0);
+    }
+
+    async function loadLabelTemplateData() {
+      try {
+        const res = await fetch('/admin/api/label-template');
+        const data = await res.json();
+        if (data.status === 'ok') {
+          currentLabelTemplate = data.template || {};
+          defaultLabelTemplate = data.default_template || {};
+          if (!sampleGuestData && data.sample_guest) {
+            sampleGuestData = data.sample_guest;
+          }
+          applyTemplateToForm(currentLabelTemplate);
+          triggerLabelPreviewDebounced(0);
+        }
+      } catch (err) {
+        console.warn('Error cargando plantilla de etiqueta:', err);
+      }
+    }
+
+    function applyTemplateToForm(tpl) {
+      if (!tpl) return;
+
+      // Encabezado
+      const h = tpl.header_text || {};
+      document.getElementById('lbl-header-enabled').checked = Boolean(h.enabled);
+      document.getElementById('lbl-header-text').value = h.text || '';
+      document.getElementById('lbl-header-size').value = h.font_size || 22;
+      document.getElementById('lbl-header-size-val').textContent = h.font_size || 22;
+      document.getElementById('lbl-header-bold').checked = h.bold !== false;
+
+      // Nombre
+      const n = tpl.full_name || {};
+      document.getElementById('lbl-name-enabled').checked = n.enabled !== false;
+      document.getElementById('lbl-name-size').value = n.font_size || 54;
+      document.getElementById('lbl-name-size-val').textContent = n.font_size || 54;
+      document.getElementById('lbl-name-bold').checked = n.bold !== false;
+      document.getElementById('lbl-name-multiline').checked = n.auto_multiline !== false;
+
+      // Empresa
+      const c = tpl.company || {};
+      document.getElementById('lbl-comp-enabled').checked = c.enabled !== false;
+      document.getElementById('lbl-comp-size').value = c.font_size || 32;
+      document.getElementById('lbl-comp-size-val').textContent = c.font_size || 32;
+      document.getElementById('lbl-comp-bold').checked = c.bold !== false;
+
+      // Cargo
+      const p = tpl.position || {};
+      document.getElementById('lbl-pos-enabled').checked = p.enabled !== false;
+      document.getElementById('lbl-pos-size').value = p.font_size || 26;
+      document.getElementById('lbl-pos-size-val').textContent = p.font_size || 26;
+      document.getElementById('lbl-pos-bold').checked = Boolean(p.bold);
+
+      // Categoría
+      const cat = tpl.category || {};
+      document.getElementById('lbl-cat-enabled').checked = Boolean(cat.enabled);
+      document.getElementById('lbl-cat-size').value = cat.font_size || 22;
+      document.getElementById('lbl-cat-size-val').textContent = cat.font_size || 22;
+      document.getElementById('lbl-cat-bold').checked = cat.bold !== false;
+
+      // Código
+      const cd = tpl.guest_code || {};
+      document.getElementById('lbl-code-enabled').checked = Boolean(cd.enabled);
+      document.getElementById('lbl-code-size').value = cd.font_size || 20;
+      document.getElementById('lbl-code-size-val').textContent = cd.font_size || 20;
+      document.getElementById('lbl-code-bold').checked = Boolean(cd.bold);
+
+      // Alineación
+      setLabelAlign(tpl.align || 'center', false);
+
+      // QR
+      const qr = tpl.qr_code || {};
+      const qrEnabled = Boolean(qr.enabled);
+      document.getElementById('lbl-qr-enabled').checked = qrEnabled;
+      document.getElementById('lbl-qr-position').value = qr.position || 'right';
+      document.getElementById('lbl-qrsize').value = qr.size || 130;
+      document.getElementById('lbl-qrsize-val').textContent = qr.size || 130;
+      document.getElementById('lbl-qr-size-container').style.display = qrEnabled ? 'flex' : 'none';
+
+      // Espaciado y offset
+      const spacing = tpl.line_spacing !== undefined ? tpl.line_spacing : 14;
+      document.getElementById('lbl-spacing').value = spacing;
+      document.getElementById('lbl-spacing-val').textContent = spacing;
+
+      const voff = tpl.vertical_offset !== undefined ? tpl.vertical_offset : 0;
+      document.getElementById('lbl-voffset').value = voff;
+      document.getElementById('lbl-voffset-val').textContent = (voff > 0 ? '+' : '') + voff;
+    }
+
+    function setLabelAlign(align, trigger = true) {
+      labelAlignMode = align;
+      const btnCenter = document.getElementById('btn-align-center');
+      const btnLeft = document.getElementById('btn-align-left');
+      if (!btnCenter || !btnLeft) return;
+      if (align === 'left') {
+        btnLeft.className = 'flex-1 py-1 px-2 rounded-lg border border-slate-200 bg-slate-100 font-semibold text-slate-800 transition-colors';
+        btnCenter.className = 'flex-1 py-1 px-2 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition-colors';
+      } else {
+        btnCenter.className = 'flex-1 py-1 px-2 rounded-lg border border-slate-200 bg-slate-100 font-semibold text-slate-800 transition-colors';
+        btnLeft.className = 'flex-1 py-1 px-2 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition-colors';
+      }
+      if (trigger) triggerLabelPreviewDebounced();
+    }
+
+    function getLabelTemplateFromForm() {
+      const qrEnabled = document.getElementById('lbl-qr-enabled').checked;
+      const qrContainer = document.getElementById('lbl-qr-size-container');
+      if (qrContainer) qrContainer.style.display = qrEnabled ? 'flex' : 'none';
+
+      return {
+        header_text: {
+          enabled: document.getElementById('lbl-header-enabled').checked,
+          text: document.getElementById('lbl-header-text').value.trim(),
+          font_size: parseInt(document.getElementById('lbl-header-size').value, 10) || 22,
+          bold: document.getElementById('lbl-header-bold').checked,
+        },
+        full_name: {
+          enabled: document.getElementById('lbl-name-enabled').checked,
+          font_size: parseInt(document.getElementById('lbl-name-size').value, 10) || 54,
+          bold: document.getElementById('lbl-name-bold').checked,
+          auto_multiline: document.getElementById('lbl-name-multiline').checked,
+        },
+        company: {
+          enabled: document.getElementById('lbl-comp-enabled').checked,
+          font_size: parseInt(document.getElementById('lbl-comp-size').value, 10) || 32,
+          bold: document.getElementById('lbl-comp-bold').checked,
+        },
+        position: {
+          enabled: document.getElementById('lbl-pos-enabled').checked,
+          font_size: parseInt(document.getElementById('lbl-pos-size').value, 10) || 26,
+          bold: document.getElementById('lbl-pos-bold').checked,
+        },
+        category: {
+          enabled: document.getElementById('lbl-cat-enabled').checked,
+          font_size: parseInt(document.getElementById('lbl-cat-size').value, 10) || 22,
+          bold: document.getElementById('lbl-cat-bold').checked,
+        },
+        guest_code: {
+          enabled: document.getElementById('lbl-code-enabled').checked,
+          font_size: parseInt(document.getElementById('lbl-code-size').value, 10) || 20,
+          bold: document.getElementById('lbl-code-bold').checked,
+        },
+        qr_code: {
+          enabled: qrEnabled,
+          position: document.getElementById('lbl-qr-position').value || 'right',
+          size: parseInt(document.getElementById('lbl-qrsize').value, 10) || 130,
+        },
+        align: labelAlignMode,
+        line_spacing: parseInt(document.getElementById('lbl-spacing').value, 10) || 14,
+        vertical_offset: parseInt(document.getElementById('lbl-voffset').value, 10) || 0,
+      };
+    }
+
+    function triggerLabelPreviewDebounced(delay = 180) {
+      clearTimeout(labelPreviewDebounceTimer);
+      labelPreviewDebounceTimer = setTimeout(fetchLabelPreview, delay);
+    }
+
+    async function fetchLabelPreview() {
+      const template = getLabelTemplateFromForm();
+      const loadingEl = document.getElementById('label-preview-loading');
+      const imgEl = document.getElementById('label-preview-img');
+      if (loadingEl) loadingEl.style.display = 'inline';
+
+      try {
+        const res = await fetch('/admin/api/label-preview', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            template: template,
+            guest: sampleGuestData,
+          }),
+        });
+
+        if (res.ok) {
+          const blob = await res.blob();
+          if (imgEl) {
+            imgEl.src = URL.createObjectURL(blob);
+          }
+        }
+      } catch (err) {
+        console.warn('Error obteniendo preview de etiqueta:', err);
+      } finally {
+        if (loadingEl) loadingEl.style.display = 'none';
+      }
+    }
+
+    async function saveLabelTemplate() {
+      const template = getLabelTemplateFromForm();
+      const saveBtn = document.getElementById('btn-save-label-template');
+      if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = `<span>Guardando...</span>`;
+      }
+
+      try {
+        const res = await fetch('/admin/api/label-template', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ template: template }),
+        });
+        const data = await res.json();
+        if (data.status === 'ok') {
+          currentLabelTemplate = data.template;
+          showToast('Plantilla de credencial guardada exitosamente.', 'success');
+          closeLabelDesignerModal();
+        } else {
+          showToast(data.error || 'Error al guardar plantilla.', 'error');
+        }
+      } catch (err) {
+        showToast('Error de conexión: ' + err.message, 'error');
+      } finally {
+        if (saveBtn) {
+          saveBtn.disabled = false;
+          saveBtn.innerHTML = `
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+            </svg>
+            <span>Guardar Plantilla</span>
+          `;
+        }
+      }
+    }
+
+    function resetToDefaultLabelTemplate() {
+      if (defaultLabelTemplate) {
+        applyTemplateToForm(defaultLabelTemplate);
+        triggerLabelPreviewDebounced(0);
+        showToast('Valores predeterminados restablecidos.', 'info');
+      }
+    }
+
+    async function testPrintLabelTemplate() {
+      const template = getLabelTemplateFromForm();
+      const printBtn = document.getElementById('btn-test-print-label');
+      if (printBtn) {
+        printBtn.disabled = true;
+        printBtn.innerHTML = `
+          <svg class="animate-spin w-4 h-4 text-emerald-600" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+          </svg>
+          <span>Enviando a Brother QL-800...</span>
+        `;
+      }
+
+      try {
+        const res = await fetch('/admin/api/label-template/test-print', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            template: template,
+            guest: sampleGuestData,
+          }),
+        });
+        const data = await res.json();
+        if (data.success || data.status === 'ok') {
+          showToast('Etiqueta emitida correctamente en la impresora Brother QL-800.', 'success');
+        } else {
+          showToast(data.message || 'No se pudo emitir la etiqueta en el hardware.', 'error');
+        }
+      } catch (err) {
+        showToast('Error de comunicación con la impresora: ' + err.message, 'error');
+      } finally {
+        if (printBtn) {
+          printBtn.disabled = false;
+          printBtn.innerHTML = `
+            <svg class="w-4 h-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+            </svg>
+            <span>Imprimir Etiqueta de Prueba</span>
+          `;
+        }
       }
     }
 
