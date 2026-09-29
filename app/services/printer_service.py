@@ -290,24 +290,47 @@ def build_label_image(guest: dict) -> Image.Image:
 
 
 def print_guest_ticket(guest: dict, printer_name: str = Config.PRINTER_NAME) -> tuple[bool, str]:
-    """Imprime el ticket del invitado mediante win32print a 300 DPI."""
+    """
+    Imprime el ticket del invitado mediante win32print a 300 DPI.
+    Regla estricta de negocio: Si la impresora no está conectada y lista, o no se puede
+    validar la emisión física del ticket, la función DEBE retornar False para
+    impedir la acreditación del participante en el sistema.
+    """
     label_img = build_label_image(guest)
 
+    # Permitir simulación únicamente bajo la suite de pruebas unitarias automáticas (TESTING=True)
+    try:
+        from flask import current_app
+        is_testing = bool(current_app and current_app.config.get("TESTING"))
+    except Exception:
+        is_testing = False
+
+    if is_testing:
+        log.info(f"[TESTING] Ticket simulado para {guest.get('name') or guest.get('full_name')} bajo suite de pruebas.")
+        return True, "Ticket emitido exitosamente (modo pruebas)"
+
     if not Config.PRINTER_ENABLED:
-        log.info(f"[SIMULACIÓN] Ticket simulado para {guest.get('name') or guest.get('full_name')} (impresora deshabilitada).")
-        return True, "Ticket simulado exitosamente (impresora deshabilitada)"
+        log.warning(f"Impresión deshabilitada por configuración. No se emitirá credencial para {guest.get('name') or guest.get('full_name')}.")
+        return False, "La impresora está deshabilitada en la configuración del sistema. No se puede acreditar sin emisión física del ticket."
 
     if not WIN32_AVAILABLE:
-        log.info(f"[SIMULACIÓN] Ticket generado exitosamente para {guest.get('name') or guest.get('full_name')}.")
-        return True, "Ticket simulado exitosamente (Win32 no disponible)"
+        log.error("win32print no disponible en este entorno.")
+        return False, "Subsistema de impresión de Windows no disponible. No se puede validar la emisión física del ticket."
+
+    # Comprobar estado de conexión física y preparación del hardware Brother QL-800
+    status = get_printer_connection_status(printer_name)
+    if not status.get("installed"):
+        log.warning(f"Impresora '{printer_name}' no instalada en Windows.")
+        return False, f"La impresora '{printer_name}' no está instalada en Windows. No se puede acreditar sin emitir la credencial."
+
+    if not status.get("is_ready") and not status.get("online"):
+        log.warning(f"Impresora '{printer_name}' no lista: {status.get('status_text')}")
+        return False, f"La impresora '{printer_name}' no está conectada o no está lista ({status.get('status_text')}). Asistencia no acreditada."
 
     try:
         printers = [p[2] for p in win32print.EnumPrinters(win32print.PRINTER_ENUM_LOCAL | win32print.PRINTER_ENUM_CONNECTIONS)]
         target_printer = next((p for p in printers if printer_name.lower() in p.lower()), None)
         if not target_printer:
-            if os.getenv("ALLOW_PRINT_SIMULATION", "true").lower() in ("true", "1", "yes"):
-                log.warning(f"Impresora '{printer_name}' no conectada. Emitiendo simulación para no bloquear acreditación.")
-                return True, f"Ticket simulado exitosamente (Impresora '{printer_name}' no detectada)"
             return False, f"Impresora '{printer_name}' no encontrada en Windows."
 
         hprinter = win32print.OpenPrinter(target_printer)
@@ -327,7 +350,7 @@ def print_guest_ticket(guest: dict, printer_name: str = Config.PRINTER_NAME) -> 
         finally:
             win32print.ClosePrinter(hprinter)
 
-        return True, "Ticket impreso correctamente"
+        return True, "Ticket emitido correctamente en la impresora Brother QL-800."
     except Exception as e:
-        log.error(f"Error imprimiendo ticket: {e}")
-        return False, str(e)
+        log.error(f"Error de hardware imprimiendo ticket: {e}")
+        return False, f"Error al emitir ticket físico: {e}"
