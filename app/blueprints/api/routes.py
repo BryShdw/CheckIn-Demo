@@ -622,7 +622,9 @@ def api_resync_onedrive():
     return jsonify({"status": "ok", "message": msg, "guest_count": count})
 
 
+@api_bp.route("/reset-all", methods=["POST"])
 @api_bp.route("/reset-checkins", methods=["POST"])
+@api_bp.route("/checkins/reset", methods=["POST"])
 def api_reset_checkins():
     event = get_or_create_active_event()
     count = reset_all_checkins(event.id)
@@ -633,6 +635,7 @@ def api_reset_checkins():
 
     return jsonify({
         "status": "ok",
+        "success": True,
         "message": f"Se han reiniciado {count} registros de asistencia.",
         "reset_count": count,
     })

@@ -327,3 +327,19 @@ def export_attendance():
         as_attachment=True,
         download_name=filename,
     )
+
+
+@admin_bp.route("/api/reset-all", methods=["POST"])
+@admin_bp.route("/api/reset-checkins", methods=["POST"])
+def admin_api_reset_checkins():
+    event = get_or_create_active_event()
+    count = reset_all_checkins(event.id)
+    user_id = current_user.id if current_user.is_authenticated else None
+    log_audit("CHECKINS_RESET", user_id=user_id, target_type="EVENT", target_id=str(event.id),
+              details=f"Reiniciadas {count} asistencias.", ip_address=request.remote_addr)
+    return jsonify({
+        "status": "ok",
+        "success": True,
+        "message": f"Se han reiniciado {count} registros de asistencia.",
+        "reset_count": count,
+    })
