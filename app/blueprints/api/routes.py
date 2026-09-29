@@ -275,44 +275,156 @@ def api_print_ticket(guest_id):
 
 @api_bp.route("/facial-match", methods=["POST"])
 def api_facial_match():
-    data = request.get_json() or {}
-    image_b64 = data.get("image")
-    if not image_b64:
-        return jsonify({"status": "error", "message": "No se recibió imagen"}), 400
+    """
+    Recibe fotograma de la cámara del Kiosko en base64 o archivo multipart.
+    Identifica al usuario por biometría facial YuNet + SFace.
+    - Modo automático: ejecuta check-in e imprime credencial física en Brother QL-800.
+    - Modo manual: retorna datos del participante para confirmación en pantalla.
+    - Respuestas estructuradas compatibles con index.html:
+      * 'ok': Acreditado y etiqueta impresa.
+      * 'already_registered': Ya cuenta con check-in previo.
+      * 'identified': Modo manual, esperando confirmación del usuario.
+      * 'not_registered': ID no encontrado en la lista activa.
+      * 'print_failed': Error de hardware de impresión.
+      * 'no_match': Rostro detectado pero no coincide con la base.
+      * 'no_face': Ningún rostro detectado en el fotograma.
+    """
+    data = request.get_json(silent=True) or {}
+    image_b64 = data.get("image_base64") or data.get("image") or data.get("image_data")
 
-    try:
-        if "," in image_b64:
-            image_b64 = image_b64.split(",", 1)[1]
-        img_bytes = base64.b64decode(image_b64)
-        np_arr = np.frombuffer(img_bytes, np.uint8)
-        img_bgr = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
-        if img_bgr is None:
-            return jsonify({"status": "error", "message": "Imagen no decodificable"}), 400
-    except Exception as e:
-        return jsonify({"status": "error", "message": f"Error decodificando imagen: {e}"}), 400
+    img_bgr = None
+    if not image_b64 and "file" in request.files:
+        try:
+            file_bytes = request.files["file"].read()
+            np_arr = np.frombuffer(file_bytes, np.uint8)
+            img_bgr = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+        except Exception as e:
+            return jsonify({"status": "error", "message": f"Error leyendo archivo de imagen: {e}"}), 400
+    elif image_b64:
+        try:
+            if "," in image_b64:
+                image_b64 = image_b64.split(",", 1)[1]
+            img_bytes = base64.b64decode(image_b64)
+            np_arr = np.frombuffer(img_bytes, np.uint8)
+            img_bgr = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+        except Exception as e:
+            return jsonify({"status": "error", "message": f"Error decodificando imagen base64: {e}"}), 400
+
+    if img_bgr is None or img_bgr.size == 0:
+        return jsonify({"status": "error", "message": "No se recibió una imagen válida"}), 400
 
     event = get_or_create_active_event()
     k_settings = get_kiosk_settings(event.id)
-    threshold = k_settings.face_threshold
+    threshold = float(data.get("threshold") or k_settings.face_threshold or Config.DEFAULT_FACE_THRESHOLD)
+
+    if "auto_checkin" in data:
+        auto_checkin = data.get("auto_checkin")
+        if isinstance(auto_checkin, str):
+            auto_checkin = auto_checkin.lower() in ("true", "1", "yes")
+        else:
+            auto_checkin = bool(auto_checkin)
+    else:
+        auto_checkin = (k_settings.mode == "auto")
 
     matched_code, similarity, bbox, top2_sim = match_face(img_bgr, threshold=threshold)
 
-    if not matched_code:
+    # 1. Sin rostro detectado en fotograma
+    if bbox is None:
         return jsonify({
-            "status": "unmatched",
-            "similarity": similarity,
-            "bbox": bbox,
+            "status": "no_face",
+            "similarity": 0.0,
+            "bbox": None,
+            "message": "No se detectó ningún rostro en la cámara",
         })
 
+    # 2. Rostro detectado pero no coincide con ningún participante autorizado
+    if not matched_code:
+        return jsonify({
+            "status": "no_match",
+            "similarity": similarity,
+            "bbox": bbox,
+            "message": "Rostro detectado pero no coincide con ningún participante registrado",
+        })
+
+    # 3. Candidato identificado: buscar en MySQL
     guest = find_guest(matched_code, event.id)
     if not guest:
-        return jsonify({"status": "unmatched", "similarity": similarity, "bbox": bbox})
+        return jsonify({
+            "status": "not_registered",
+            "guest_id": matched_code,
+            "similarity": similarity,
+            "bbox": bbox,
+            "message": f"Usuario no registrado en la lista activa ({matched_code})",
+        })
+
+    # 4. Modo Automático: procesar check-in e imprimir credencial
+    if auto_checkin:
+        if guest.is_checked_in:
+            return jsonify({
+                "status": "already_registered",
+                "already_checked_in": True,
+                "guest": guest.to_dict(),
+                "similarity": similarity,
+                "bbox": bbox,
+                "message": f"El invitado {guest.full_name} ya cuenta con asistencia previa.",
+            })
+
+        user_id = current_user.id if current_user.is_authenticated else None
+        result, status_code = process_checkin(
+            guest_code_or_url=guest.guest_code,
+            method="FACIAL",
+            confidence_score=similarity,
+            verified_by_user_id=user_id,
+            ip_address=request.remote_addr,
+            force_reprint=False,
+        )
+
+        if status_code == 200:
+            return jsonify({
+                "status": "ok",
+                "success": True,
+                "guest": result.get("guest") or guest.to_dict(),
+                "print": {"status": "ok", "message": result.get("message")},
+                "similarity": similarity,
+                "bbox": bbox,
+                "message": f"¡Bienvenido(a) {guest.full_name}! Credencial emitida.",
+            }), 200
+        elif status_code == 409:
+            return jsonify({
+                "status": "already_registered",
+                "already_checked_in": True,
+                "guest": result.get("guest") or guest.to_dict(),
+                "similarity": similarity,
+                "bbox": bbox,
+                "message": result.get("message"),
+            }), 200
+        else:
+            return jsonify({
+                "status": "print_failed",
+                "guest": guest.to_dict(),
+                "similarity": similarity,
+                "bbox": bbox,
+                "error": result.get("error", "Error procesando impresión/checkin"),
+                "message": result.get("error", "Error procesando impresión/checkin"),
+            }), 500
+
+    # 5. Modo Manual: identificación para confirmación visual
+    if guest.is_checked_in:
+        return jsonify({
+            "status": "already_registered",
+            "already_checked_in": True,
+            "guest": guest.to_dict(),
+            "similarity": similarity,
+            "bbox": bbox,
+            "message": f"El invitado {guest.full_name} ya cuenta con asistencia previa.",
+        })
 
     return jsonify({
-        "status": "matched",
+        "status": "identified",
         "guest": guest.to_dict(),
         "similarity": similarity,
         "bbox": bbox,
+        "message": f"Rostro identificado: {guest.full_name}",
     })
 
 
@@ -380,14 +492,15 @@ def api_enroll_guest_face(guest_id):
 
 
 @api_bp.route("/guest/<path:guest_id>/face", methods=["DELETE"])
-def api_delete_guest_face_route(guest_id):
+@api_bp.route("/guest/<path:guest_id>/face/<path:image_id>", methods=["DELETE"])
+def api_delete_guest_face_route(guest_id, image_id=None):
     event = get_or_create_active_event()
     guest = find_guest(guest_id, event.id)
     if not guest:
         return jsonify({"error": f"Invitado con ID '{guest_id}' no encontrado"}), 404
 
-    image_id = request.args.get("image_id")
-    delete_guest_face(guest, image_id)
+    target_image_id = image_id or request.args.get("image_id")
+    delete_guest_face(guest, target_image_id)
 
     user_id = current_user.id if current_user.is_authenticated else None
     log_audit("FACE_DELETE", user_id=user_id, target_type="GUEST", target_id=guest.guest_code,
@@ -401,7 +514,9 @@ def api_delete_guest_face_route(guest_id):
     })
 
 
-@api_bp.route("/faces/delete-all", methods=["POST"])
+@api_bp.route("/faces/delete-all", methods=["POST", "DELETE"])
+@api_bp.route("/guest/faces/all", methods=["POST", "DELETE"])
+@api_bp.route("/faces/all", methods=["POST", "DELETE"])
 def api_delete_all_faces():
     res = delete_all_enrolled_faces()
     user_id = current_user.id if current_user.is_authenticated else None

@@ -12,6 +12,14 @@ class KioskSetting(db.Model):
     face_threshold = db.Column(db.Float, default=0.70, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
+    @property
+    def mode(self) -> str:
+        return self.operation_mode
+
+    @property
+    def method(self) -> str:
+        return self.scan_method
+
     def to_dict(self) -> dict:
         return {
             "method": self.scan_method,

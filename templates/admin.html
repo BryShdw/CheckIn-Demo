@@ -1,1951 +1,1992 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" class="h-full bg-slate-50">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin — Gestión de Invitados e Impresión</title>
-  <link rel="stylesheet" href="/static/style.css">
+  <title>DACER CheckIn // Panel de Control - Administración</title>
+
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              200: '#bfdbfe',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+              800: '#1e40af',
+              900: '#1e3a8a',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
   <style>
-    .source-badge {
-      display: inline-flex; align-items: center; gap: 6px;
-      padding: 4px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 600;
-    }
-    .source-badge.onedrive { background: rgba(0,120,212,0.15); color: #4fa3e0; border: 1px solid rgba(0,120,212,0.3); }
-    .source-badge.cache    { background: rgba(245,158,11,0.15); color: var(--warn);    border: 1px solid rgba(245,158,11,0.3); }
-    .source-badge.local    { background: rgba(148,163,184,0.15); color: var(--muted);  border: 1px solid rgba(148,163,184,0.25); }
-    .source-badge.none     { background: rgba(239,68,68,0.15);  color: var(--danger);  border: 1px solid rgba(239,68,68,0.3); }
+    /* Estilos base limpios y scrollbar ergonómica */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
-    .onedrive-bar {
-      background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border);
-      padding: 14px 18px; margin-bottom: 20px;
-      display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
-    }
-    .onedrive-bar .od-user { font-size: 0.88rem; color: var(--muted); flex: 1; min-width: 240px; }
-    .onedrive-bar strong   { color: var(--text); }
-
-    .source-toggle-group {
-      display: inline-flex;
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 3px;
-      gap: 3px;
-    }
-    .source-toggle-btn {
-      border: none;
-      background: transparent;
-      color: var(--muted);
-      border-radius: 16px;
-      padding: 6px 14px;
-      font-size: 0.82rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all .2s;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .source-toggle-btn:hover { color: var(--text); }
-    .source-toggle-btn.active {
-      background: var(--accent);
-      color: #fff;
-      box-shadow: 0 2px 8px var(--accent-glow);
-    }
-    .source-toggle-btn.active.local {
-      background: #0284c7;
-    }
-
-    /* Estilos de pastillas de modo y configuración de kiosko */
-    .mode-pill {
-      display: inline-flex;
-      align-items: center;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 30px;
-      padding: 3px;
-      gap: 3px;
-    }
-    .mode-pill button {
-      border: none;
-      background: transparent;
-      color: var(--muted);
-      padding: 6px 12px;
-      border-radius: 20px;
-      font-size: 0.8rem;
-      font-weight: 600;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 5px;
-      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-      user-select: none;
-      outline: none;
-    }
-    .mode-pill button:hover:not(.active) {
-      color: var(--text);
-      background: var(--surface3);
-    }
-    .mode-pill button.active {
-      background: var(--accent);
-      color: #ffffff;
-      font-weight: 700;
-    }
-    #admin-mode-manual.active {
-      background: var(--warn);
-      color: #ffffff;
-      font-weight: 700;
-    }
-    #admin-mode-auto.active {
-      background: var(--success);
-      color: #ffffff;
-      font-weight: 700;
-    }
-
-
-    .printer-status-bar {
-      background: var(--surface2); border-radius: 10px; border: 1px solid var(--border);
-      padding: 10px 16px; margin-bottom: 20px;
-      display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
-    }
-
-    .btn-action {
-      padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border);
-      background: var(--surface2); color: var(--text); cursor: pointer;
-      font-size: 0.82rem; font-weight: 500; display: inline-flex; align-items: center; gap: 4px;
-      transition: all .2s;
-    }
-    .btn-action:hover { border-color: var(--accent); color: var(--accent); }
-    .btn-action.print:hover { border-color: #3b82f6; background: rgba(59,130,246,0.15); color: #60a5fa; }
-    .btn-action.status-toggle { border-color: rgba(255,255,255,0.15); }
-    .btn-action.status-toggle:hover { border-color: var(--warn); color: var(--warn); }
-    .btn-action.delete { border-color: rgba(239,68,68,0.3); color: #fca5a5; }
-    .btn-action.delete:hover { border-color: var(--danger); background: rgba(239,68,68,0.15); color: var(--danger); }
-
-    /* Modal */
+    /* Modal Backdrop Transitions */
     .modal-backdrop {
-      position: fixed; inset: 0; background: rgba(0,0,0,0.65);
-      display: none; align-items: center; justify-content: center; z-index: 1000;
-      backdrop-filter: blur(4px);
+      position: fixed; inset: 0; background: rgba(15, 23, 42, 0.5);
+      backdrop-filter: blur(2px); display: none; align-items: center; justify-content: center;
+      z-index: 50; padding: 1rem;
     }
     .modal-backdrop.open { display: flex; }
-    .modal-box {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius); width: 92%; max-width: 480px;
-      padding: 24px; box-shadow: var(--shadow); animation: slide-in 0.2s ease-out;
-    }
-    .modal-title { font-size: 1.2rem; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
-    .form-group { margin-bottom: 14px; }
-    .form-group label { display: block; font-size: 0.82rem; color: var(--muted); margin-bottom: 6px; font-weight: 600; text-transform: uppercase; }
-    .form-group input {
-      width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border);
-      background: var(--surface2); color: var(--text); font-size: 0.95rem; outline: none;
-    }
-    .form-group input:focus { border-color: var(--accent); }
-    .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
 
-    .search-filter-box {
-      display: flex; gap: 10px; margin-bottom: 14px; align-items: center; flex-wrap: wrap;
+    /* Estilos de botones segmentados planos */
+    .segmented-btn {
+      padding: 0.375rem 0.875rem;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      color: #64748b;
+      border-radius: 0.375rem;
+      transition: all 0.15s ease;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.375rem;
+      user-select: none;
     }
-    .search-filter-input {
-      flex: 1; min-width: 220px; padding: 10px 14px; border-radius: 8px;
-      border: 1px solid var(--border); background: var(--surface);
-      color: var(--text); font-size: 0.9rem; outline: none;
+    .segmented-btn:hover:not(.active) {
+      color: #0f172a;
+      background: rgba(255, 255, 255, 0.6);
     }
-    .search-filter-input:focus { border-color: var(--accent); }
-
-    /* Estilos de Enrolamiento Facial */
-    .face-btn {
-      padding: 5px 10px; border-radius: 20px; font-size: 0.78rem; font-weight: 600;
-      border: 1px solid rgba(148, 163, 184, 0.3); background: rgba(148, 163, 184, 0.1);
-      color: var(--muted); cursor: pointer; transition: all 0.2s;
-    }
-    .face-btn:hover { border-color: var(--accent); color: var(--accent); }
-    .face-btn.active {
-      background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.4);
-      color: #34d399;
-    }
-    .face-btn.active:hover { background: rgba(16, 185, 129, 0.25); }
-
-    .face-grid {
-      display: grid; grid-template-columns: repeat(auto-fill, minmax(105px, 1fr)); gap: 10px;
-      margin: 12px 0 18px 0;
-    }
-    .face-card {
-      position: relative; border-radius: 8px; overflow: hidden;
-      border: 1px solid var(--border); background: var(--surface2);
-      aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
-    }
-    .face-card img { width: 100%; height: 100%; object-fit: cover; }
-    .face-card .del-btn {
-      position: absolute; top: 4px; right: 4px; width: 24px; height: 24px;
-      border-radius: 50%; background: rgba(239, 68, 68, 0.85); color: #fff;
-      border: none; cursor: pointer; font-size: 0.75rem; display: flex;
-      align-items: center; justify-content: center; transition: transform 0.15s;
-    }
-    .face-card .del-btn:hover { transform: scale(1.15); background: var(--danger); }
-    .face-card-empty {
-      border: 2px dashed rgba(255, 255, 255, 0.15); color: var(--muted);
-      font-size: 0.75rem; text-align: center; padding: 8px;
+    .segmented-btn.active {
+      background: #ffffff;
+      color: #0f172a;
+      font-weight: 600;
+      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     }
 
-    .webcam-box {
-      width: 100%; max-width: 380px; height: 240px; background: #000;
-      border-radius: 8px; overflow: hidden; position: relative; margin: 0 auto 12px auto;
-      border: 1px solid var(--border);
+    /* Printer Indicator dot */
+    .printer-dot {
+      width: 0.625rem; height: 0.625rem; border-radius: 9999px; background: #dc2626; flex-shrink: 0;
     }
-    .webcam-box video { width: 100%; height: 100%; object-fit: cover; }
-    .webcam-overlay {
-      position: absolute; inset: 0; pointer-events: none;
-      display: flex; align-items: center; justify-content: center;
+    .printer-dot.ready { background: #10b981; }
+
+    /* Toast Notification */
+    #toast {
+      position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 100;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      transform: translateY(120%); opacity: 0; pointer-events: none;
     }
-    .webcam-target {
-      width: 140px; height: 170px; border: 2px dashed rgba(204, 35, 43, 0.75);
-      border-radius: 50%;
+    #toast.show {
+      transform: translateY(0); opacity: 1; pointer-events: auto;
     }
   </style>
 </head>
-<body>
+<body class="h-full bg-slate-50 text-slate-800 font-sans antialiased flex flex-col">
 
-<header>
-  <a class="logo" href="/" style="display:flex; align-items:center; gap:12px; text-decoration:none;">
-    <img src="/static/logo-dark.png" alt="DACER" style="height:32px; object-fit:contain;">
-    <span style="font-weight:700; font-size:1.1rem; color:var(--text); letter-spacing:-0.01em;">Panel de Control</span>
-  </a>
-  <div class="header-actions">
-    <a href="/" class="btn">Ir al Kiosko</a>
-    <a href="/admin/export-attendance" class="btn" style="background:#16a34a; border-color:#16a34a; color:#fff; font-weight:600;" title="Descargar lista completa en Excel con registros de asistencia">📊 Exportar Excel</a>
-    <button class="btn" onclick="openImportModal()" style="font-weight:700; background:var(--accent); border-color:var(--accent); color:#fff;">📥 Subir Invitados</button>
-    <button class="btn" onclick="openEventsModal()" style="font-weight:600; background:var(--surface2);">📅 Eventos</button>
-    <button class="btn" onclick="openUsersModal()" style="font-weight:600; background:var(--surface2);">👥 Usuarios</button>
-    <button class="btn" onclick="openAuditModal()" style="font-weight:600; background:var(--surface2);">📈 Analítica</button>
-    <button class="btn danger" onclick="confirmReset()">Reiniciar Asistencias</button>
-    <button class="btn danger" onclick="confirmDeleteAllFaces()" style="border-color:#fca5a5; color:#b91c1c; background:#fef2f2;" title="Eliminar las fotos y modelos faciales de todos los invitados">Eliminar Fotos Faciales</button>
-    <div style="display:flex; align-items:center; gap:8px; border-left:1px solid var(--border); padding-left:10px; margin-left:4px;">
-      <span style="font-size:0.83rem; font-weight:700; color:var(--text);">👤 {{ current_user.username }}</span>
-      <a href="/auth/logout" class="btn" style="font-size:0.8rem; padding:6px 10px; color:#b91c1c; border-color:#fecaca; background:#fef2f2;">Cerrar Sesión</a>
-    </div>
-  </div>
-</header>
+  <!-- ========================================================================= -->
+  <!-- BARRA SUPERIOR (HEADER ESTÁTICO / FIJO)                                    -->
+  <!-- ========================================================================= -->
+  <header class="sticky top-0 z-40 bg-white border-b border-slate-200 shadow-xs">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+      
+      <!-- Brand & Título -->
+      <div class="flex items-center gap-3">
+        <a href="/" class="flex items-center gap-3 text-decoration-none group">
+          <img src="/static/logo-dark.png" alt="DACER" class="h-7 w-auto object-contain">
+          <div class="h-5 w-px bg-slate-200 hidden sm:block"></div>
+          <span class="text-slate-900 font-bold text-base tracking-tight hidden sm:inline-block">Panel de Control</span>
+        </a>
 
-<div class="admin-wrap" style="max-width: 1100px;">
-  <!-- Barra de Evento Activo -->
-  <div style="background:var(--surface); border:1px solid var(--border); border-left:4px solid var(--accent); border-radius:var(--radius); padding:14px 18px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; box-shadow:var(--shadow);">
-    <div style="display:flex; align-items:center; gap:12px;">
-      <span style="font-size:1.6rem;">📅</span>
-      <div>
-        <div style="font-size:0.75rem; color:var(--muted); font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">Evento Activo (Asistencias e Invitados)</div>
-        <div style="font-size:1.2rem; font-weight:800; color:var(--text);" id="display-active-event-name">{{ active_event.name }}</div>
-        <div style="font-size:0.82rem; color:var(--muted);" id="display-active-event-details">
-          <span>📍 {{ active_event.location or 'Sede central' }}</span>
-          {% if active_event.onedrive_url %}
-            <span style="margin-left:8px; color:#0078d4;">☁️ Conectado a OneDrive</span>
-          {% endif %}
-        </div>
-      </div>
-    </div>
-    <div style="display:flex; gap:8px; align-items:center;">
-      <button class="btn" onclick="openEventsModal()" style="font-weight:700; background:var(--surface2); border:1px solid var(--border); padding:8px 14px;">
-        🔄 Cambiar o Crear Eventos
-      </button>
-      <button class="btn" onclick="openImportModal()" style="font-weight:700; background:var(--accent); border-color:var(--accent); color:#fff; padding:8px 14px;">
-        📥 Cargar Lista a este Evento
-      </button>
-    </div>
-  </div>
-
-  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-    <h1 style="font-size:1.35rem; font-weight:700;">Gestión de Invitados y Acreditación</h1>
-    <span style="font-size:0.85rem; color:var(--muted);">Cinta: <strong>DK-1208 (38mm × 90.3mm)</strong></span>
-  </div>
-
-  <!-- Estado de Impresora Brother -->
-  <div class="printer-status-bar" id="printer-bar">
-    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-      <span class="printer-dot" id="printer-dot"></span>
-      <span style="font-size:0.92rem;" id="printer-info">Comprobando conexión de impresora Brother…</span>
-    </div>
-    <div style="display:flex; gap:8px; align-items:center;">
-      <button id="btn-purge-queue" class="btn danger" style="display:none; font-size:0.8rem; padding:6px 12px;" onclick="purgePrinterQueue()">
-        Limpiar Cola (<span id="queue-jobs-count">0</span> pendientes)
-      </button>
-      <button class="btn" style="font-size:0.82rem; padding:6px 14px; font-weight:600;" onclick="manualCheckPrinterStatus()">
-        Comprobar Conexión
-      </button>
-    </div>
-  </div>
-
-  <!-- Panel de Control y Configuración del Kiosko -->
-  <div class="kiosk-config-bar" style="background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px 20px; margin-bottom:16px; box-shadow:var(--shadow);">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
-      <div style="display:flex; align-items:center; gap:8px;">
-        <span style="font-size:1rem; font-weight:700;">Configuración de Operación del Kiosko</span>
-      </div>
-      <span style="font-size:0.8rem; color:var(--muted); background:var(--surface2); padding:4px 10px; border-radius:20px; border:1px solid var(--border);">
-        Control exclusivo desde este panel
-      </span>
-    </div>
-
-    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:16px; align-items:flex-start;">
-      <!-- 1. Método de Acreditación -->
-      <div style="background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:12px 14px;">
-        <label style="display:block; font-size:0.8rem; color:var(--muted); font-weight:700; text-transform:uppercase; margin-bottom:8px;">
-          1. Método de Acreditación
-        </label>
-        <div class="mode-pill" style="display:flex; width:100%; justify-content:space-between;">
-          <button type="button" id="admin-meth-both" class="active" onclick="updateKioskSetting('method', 'both')" style="flex:1;">QR + Facial</button>
-          <button type="button" id="admin-meth-facial" onclick="updateKioskSetting('method', 'facial')" style="flex:1;">Solo Facial</button>
-          <button type="button" id="admin-meth-qr" onclick="updateKioskSetting('method', 'qr')" style="flex:1;">Solo QR</button>
-        </div>
-        <div style="font-size:0.75rem; color:var(--muted); margin-top:6px;" id="admin-method-desc">
-          Permite escanear código QR y reconocer rostros en simultáneo.
-        </div>
-      </div>
-
-      <!-- 2. Modo de Impresión -->
-      <div style="background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:12px 14px;">
-        <label style="display:block; font-size:0.8rem; color:var(--muted); font-weight:700; text-transform:uppercase; margin-bottom:8px;">
-          2. Modo de Impresión & Confirmación
-        </label>
-        <div class="mode-pill" style="display:flex; width:100%; justify-content:space-between;">
-          <button type="button" id="admin-mode-manual" class="active" onclick="updateKioskSetting('mode', 'manual')" style="flex:1;">Manual</button>
-          <button type="button" id="admin-mode-auto" onclick="updateKioskSetting('mode', 'auto')" style="flex:1;">Automático</button>
-        </div>
-        <div style="font-size:0.75rem; color:var(--muted); margin-top:6px;" id="admin-mode-desc">
-          <strong>Manual:</strong> Muestra los datos y espera pulsar "Imprimir".<br><strong>Auto:</strong> Imprime directamente al detectar el rostro o QR.
-        </div>
-      </div>
-    </div>
-  </div>
-
-
-  <!-- Estadísticas -->
-  <div class="stats-row">
-    <div class="stat-card">
-      <div class="stat-num" id="stat-total">—</div>
-      <div class="stat-label">Total Invitados</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-num" id="stat-checked" style="color:var(--success)">—</div>
-      <div class="stat-label">Registrados</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-num" id="stat-pending" style="color:var(--muted)">—</div>
-      <div class="stat-label">Pendientes</div>
-    </div>
-  </div>
-
-  <!-- Barra de búsqueda y filtro -->
-  <div class="search-filter-box">
-    <input type="text" id="filter-input" class="search-filter-input" placeholder="Buscar por nombre, ID, empresa o cargo…" oninput="filterTable()">
-    <select id="status-filter" class="btn" onchange="filterTable()" style="padding:10px 14px;">
-      <option value="all">Todos los estados</option>
-      <option value="checked">Solo Registrados</option>
-      <option value="pending">Solo Pendientes</option>
-    </select>
-  </div>
-
-  <!-- Tabla de invitados -->
-  <div style="background:var(--surface); border-radius:var(--radius); border:1px solid var(--border); overflow-x:auto;">
-    <table class="guests-table">
-      <thead>
-        <tr>
-          <th style="width:105px;">ID</th>
-          <th>Nombres y Apellidos</th>
-          <th>Empresa</th>
-          <th>Cargo</th>
-          <th style="width:120px; text-align:center;">Rostro</th>
-          <th style="width:130px;">Estado</th>
-          <th style="width:110px;">Hora</th>
-          <th style="width:230px; text-align:center;">Acciones</th>
-        </tr>
-      </thead>
-      <tbody id="guests-tbody">
-        <tr><td colspan="8" style="text-align:center; color:var(--muted); padding:30px;">Cargando invitados…</td></tr>
-      </tbody>
-    </table>
-  </div>
-</div>
-
-<!-- Modal para Agregar / Editar Invitado -->
-<div class="modal-backdrop" id="guest-modal">
-  <div class="modal-box">
-    <div class="modal-title">Registrar Nuevo Invitado</div>
-    <form id="guest-form" onsubmit="submitGuestForm(event)">
-      <div class="form-group">
-        <label for="m-id">Código / ID *</label>
-        <input type="text" id="m-id" required placeholder="Ej. INV-011" style="font-family:monospace; text-transform:uppercase;">
-      </div>
-      <div class="form-group">
-        <label for="m-name">Nombres y Apellidos *</label>
-        <input type="text" id="m-name" required placeholder="Ej. Juan Pérez Rodríguez">
-      </div>
-      <div class="form-group">
-        <label for="m-company">Empresa</label>
-        <input type="text" id="m-company" placeholder="Ej. Corporación Andina S.A.">
-      </div>
-      <div class="form-group">
-        <label for="m-position">Cargo</label>
-        <input type="text" id="m-position" placeholder="Ej. Gerente de Operaciones">
-      </div>
-      <div class="modal-actions">
-        <button type="button" class="btn" onclick="closeAddGuestModal()">Cancelar</button>
-        <button type="submit" class="btn" style="background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600;">Guardar</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<!-- Modal para Registro y Gestión Facial de Invitado -->
-<div class="modal-backdrop" id="face-modal">
-  <div class="modal-box" style="max-width: 540px;">
-    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
-      <div>
-        <div class="modal-title" style="margin-bottom:4px;">Enrolamiento Facial</div>
-        <div style="font-size:0.88rem; color:var(--text); font-weight:600;" id="face-modal-guest-name">—</div>
-        <div style="font-size:0.8rem; color:var(--muted); font-family:monospace;" id="face-modal-guest-id">—</div>
-      </div>
-      <button class="btn" onclick="closeFaceModal()" style="padding:4px 8px; font-size:0.8rem;">✕</button>
-    </div>
-
-    <!-- Indicador de Fotos -->
-    <div style="background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:10px 14px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
-      <span style="font-size:0.85rem; font-weight:600;">Fotos registradas: <strong id="face-count-badge" style="color:var(--accent);">0 / 4</strong></span>
-      <span style="font-size:0.75rem; color:var(--muted);">Recomendado: 2 a 4 fotos</span>
-    </div>
-
-    <!-- Guía Visual de Enrolamiento Facial en 4 Pasos -->
-    <div style="background:rgba(204, 35, 43, 0.08); border:1px solid rgba(204, 35, 43, 0.25); border-radius:8px; padding:10px 12px; margin-bottom:12px;">
-      <div style="font-size:0.75rem; font-weight:700; color:var(--accent); text-transform:uppercase; margin-bottom:6px; display:flex; align-items:center; gap:6px;">
-        <span>Guía para máxima precisión (evita confusiones y falsos rechazos):</span>
-      </div>
-      <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:6px; font-size:0.72rem; text-align:center;">
-        <div style="background:var(--surface2); padding:6px 4px; border-radius:6px; border:1px solid var(--border);">
-          <div style="font-weight:700; color:var(--text);">1. Frontal</div>
-          <div style="color:var(--muted); font-size:0.68rem;">Rostro serio y directo</div>
-        </div>
-        <div style="background:var(--surface2); padding:6px 4px; border-radius:6px; border:1px solid var(--border);">
-          <div style="font-weight:700; color:var(--text);">2. Lentes</div>
-          <div style="color:var(--muted); font-size:0.68rem;">Si usa, 1 con y 1 sin</div>
-        </div>
-        <div style="background:var(--surface2); padding:6px 4px; border-radius:6px; border:1px solid var(--border);">
-          <div style="font-weight:700; color:var(--text);">3. Sonrisa</div>
-          <div style="color:var(--muted); font-size:0.68rem;">Gesto natural del evento</div>
-        </div>
-        <div style="background:var(--surface2); padding:6px 4px; border-radius:6px; border:1px solid var(--border);">
-          <div style="font-weight:700; color:var(--text);">4. Giro 15°</div>
-          <div style="color:var(--muted); font-size:0.68rem;">Ligero ángulo lateral</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Galería de Fotos Existentes -->
-    <div id="face-gallery-container" class="face-grid"></div>
-
-    <!-- Mensaje de estado -->
-    <div id="face-status-msg" style="display:none; padding:8px 12px; border-radius:6px; font-size:0.82rem; margin-bottom:12px;"></div>
-
-    <!-- Sección para Añadir Fotos -->
-    <div id="face-add-section" style="border-top:1px solid var(--border); padding-top:14px;">
-      <div style="display:flex; gap:8px; margin-bottom:12px;">
-        <button class="btn" id="tab-webcam-btn" onclick="switchFaceTab('webcam')" style="flex:1; font-size:0.82rem; font-weight:600; background:var(--surface2);">
-          Usar Cámara Web
-        </button>
-        <button class="btn" id="tab-upload-btn" onclick="switchFaceTab('upload')" style="flex:1; font-size:0.82rem; font-weight:600;">
-          Subir Archivos
+        <!-- Badge de Evento Activo -->
+        <button type="button" onclick="openEventsModal()" class="ml-2 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200/80 border border-slate-200 text-xs font-medium text-slate-700 transition-colors" title="Cambiar evento activo">
+          <svg class="w-3.5 h-3.5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+          </svg>
+          <span id="display-active-event-name" class="font-semibold text-slate-900 max-w-[140px] sm:max-w-[200px] truncate">{{ active_event.name }}</span>
+          <svg class="w-3 h-3 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+          </svg>
         </button>
       </div>
 
-      <!-- Pestaña Webcam -->
-      <div id="face-tab-webcam">
-        <div class="webcam-box">
-          <video id="face-webcam" autoplay playsinline muted></video>
-          <div class="webcam-overlay">
-            <div class="webcam-target"></div>
-          </div>
+      <!-- Acciones de Navegación y Operación -->
+      <div class="flex items-center gap-2">
+        <button type="button" onclick="openImportModal()" class="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-xs transition-colors">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+          </svg>
+          <span class="hidden sm:inline">Subir Invitados</span>
+        </button>
+
+        <a href="/admin/export-attendance" class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 rounded-lg shadow-xs transition-colors" title="Exportar lista de asistentes a Excel">
+          <svg class="w-4 h-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+          </svg>
+          <span class="hidden md:inline">Exportar Excel</span>
+        </a>
+
+        <!-- Botones secundarios limpios -->
+        <div class="hidden lg:flex items-center gap-1 border-l border-slate-200 pl-2">
+          <button type="button" onclick="openEventsModal()" class="px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors">Eventos</button>
+          <button type="button" onclick="openUsersModal()" class="px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors">Usuarios</button>
+          <button type="button" onclick="openAuditModal()" class="px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors">Analítica</button>
+          <a href="/" class="px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors">Ir al Kiosko</a>
         </div>
-        <div style="text-align:center; font-size:0.78rem; color:var(--muted); margin-bottom:10px;" id="face-capture-hint">
-          Ubica tu rostro dentro del óvalo (puedes tomar fotos de frente, sonriendo o con leve giro).
-        </div>
-        <div style="display:flex; justify-content:center; gap:10px;">
-          <button type="button" class="btn" id="btn-snap-face" onclick="captureFaceSnapshot()" style="background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600; padding:10px 20px;">
-            Tomar Foto
-          </button>
-        </div>
-      </div>
 
-      <!-- Pestaña Subir Archivos -->
-      <div id="face-tab-upload" style="display:none;">
-        <div style="border:2px dashed var(--border); border-radius:8px; padding:20px; text-align:center; background:var(--surface2); margin-bottom:12px;">
-          <p style="font-size:0.85rem; color:var(--muted); margin-bottom:10px;">
-            Selecciona de 1 a 4 imágenes del rostro (JPG, PNG)
-          </p>
-          <input type="file" id="face-file-input" accept="image/*" multiple onchange="onFaceFilesSelected(this.files)" style="font-size:0.85rem;">
-        </div>
-      </div>
-    </div>
-
-    <div class="modal-actions" style="margin-top:16px;">
-      <button type="button" class="btn" onclick="closeFaceModal()" style="font-weight:600;">Listo / Cerrar</button>
-    </div>
-  </div>
-</div>
-
-<!-- Modal para Gestión y Selección de Eventos -->
-<div class="modal-backdrop" id="events-modal">
-  <div class="modal-box" style="max-width: 680px;">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
-      <div>
-        <div class="modal-title" style="margin-bottom:2px;">Gestión de Eventos</div>
-        <div style="font-size:0.8rem; color:var(--muted);">Selecciona el evento activo o crea un nuevo evento en MySQL</div>
-      </div>
-      <button class="btn" onclick="toggleNewEventForm()" style="font-size:0.8rem; padding:6px 12px; font-weight:700; background:var(--accent); color:#fff;">+ Nuevo Evento</button>
-    </div>
-
-    <!-- Formulario para crear nuevo evento -->
-    <div id="new-event-form-container" style="display:none; background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:14px; margin-bottom:16px;">
-      <div style="font-weight:700; font-size:0.9rem; margin-bottom:10px;">Crear Nuevo Evento</div>
-      <form id="create-event-form" onsubmit="submitCreateEvent(event)">
-        <div style="margin-bottom:10px;">
-          <label style="display:block; font-size:0.78rem; font-weight:600; color:var(--muted); margin-bottom:4px;">Nombre del Evento *</label>
-          <input type="text" id="new-event-name" required placeholder="Ej. Cumbre Minera 2026 / Aniversario DACER" style="width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:6px; background:var(--surface); color:var(--text);">
-        </div>
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:10px;">
-          <div>
-            <label style="display:block; font-size:0.78rem; font-weight:600; color:var(--muted); margin-bottom:4px;">Lugar / Ubicación</label>
-            <input type="text" id="new-event-location" placeholder="Ej. Lima, Perú / Centro de Convenciones" style="width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:6px; background:var(--surface); color:var(--text);">
-          </div>
-          <div>
-            <label style="display:block; font-size:0.78rem; font-weight:600; color:var(--muted); margin-bottom:4px;">Enlace OneDrive (Opcional)</label>
-            <input type="url" id="new-event-onedrive" placeholder="https://1drv.ms/..." style="width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:6px; background:var(--surface); color:var(--text);">
-          </div>
-        </div>
-        <div style="margin-bottom:12px;">
-          <label style="display:block; font-size:0.78rem; font-weight:600; color:var(--muted); margin-bottom:4px;">Descripción</label>
-          <input type="text" id="new-event-desc" placeholder="Breve detalle del evento..." style="width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:6px; background:var(--surface); color:var(--text);">
-        </div>
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-          <label style="font-size:0.8rem; display:flex; align-items:center; gap:6px; cursor:pointer;">
-            <input type="checkbox" id="new-event-set-active" checked>
-            <span>Activar este evento de inmediato</span>
-          </label>
-          <div style="display:flex; gap:8px;">
-            <button type="button" class="btn" onclick="toggleNewEventForm()" style="font-size:0.8rem; padding:6px 12px;">Cancelar</button>
-            <button type="submit" class="btn" style="font-size:0.8rem; padding:6px 12px; background:var(--accent); color:#fff; font-weight:700;">Guardar Evento</button>
-          </div>
-        </div>
-      </form>
-    </div>
-
-    <!-- Lista de eventos -->
-    <div style="max-height: 320px; overflow-y: auto; border:1px solid var(--border); border-radius:8px;">
-      <table style="width:100%; border-collapse:collapse; font-size:0.85rem; text-align:left;">
-        <thead>
-          <tr style="background:var(--surface2); border-bottom:1px solid var(--border);">
-            <th style="padding:10px 12px;">Evento</th>
-            <th style="padding:10px 12px; text-align:center;">Invitados</th>
-            <th style="padding:10px 12px; text-align:center;">Asistencias</th>
-            <th style="padding:10px 12px; text-align:center;">Estado</th>
-            <th style="padding:10px 12px; text-align:right;">Acción</th>
-          </tr>
-        </thead>
-        <tbody id="events-table-body">
-          <tr><td colspan="5" style="padding:20px; text-align:center; color:var(--muted);">Cargando eventos...</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <div class="modal-actions" style="margin-top:16px; display:flex; justify-content:flex-end;">
-      <button type="button" class="btn" onclick="closeEventsModal()" style="font-weight:600;">Cerrar</button>
-    </div>
-  </div>
-</div>
-
-<!-- Modal Unificado para Subir / Importar Invitados al Evento Activo -->
-<div class="modal-backdrop" id="import-modal">
-  <div class="modal-box" style="max-width: 560px;">
-    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
-      <div>
-        <div class="modal-title" style="margin-bottom:2px;">Subir Lista de Invitados</div>
-        <div style="font-size:0.82rem; color:var(--muted);">
-          Destino: <strong id="modal-import-event-name" style="color:var(--text); font-weight:800;">{{ active_event.name }}</strong>
-        </div>
-      </div>
-      <button class="btn" onclick="closeImportModal()" style="padding:4px 8px; font-size:0.8rem;">✕</button>
-    </div>
-
-    <!-- Pestañas de Métodos de Subida -->
-    <div style="display:flex; gap:6px; margin-bottom:16px; border-bottom:1px solid var(--border); padding-bottom:8px;">
-      <button type="button" class="btn" id="tab-import-file-btn" onclick="switchImportTab('file')" style="flex:1; font-size:0.82rem; font-weight:700; background:var(--surface2);">
-        📁 Archivo Excel / CSV
-      </button>
-      <button type="button" class="btn" id="tab-import-onedrive-btn" onclick="switchImportTab('onedrive')" style="flex:1; font-size:0.82rem; font-weight:700; background:transparent;">
-        ☁️ Enlace OneDrive
-      </button>
-      <button type="button" class="btn" id="tab-import-manual-btn" onclick="switchImportTab('manual')" style="flex:1; font-size:0.82rem; font-weight:700; background:transparent;">
-        👤 Registro Individual
-      </button>
-    </div>
-
-    <!-- Pestaña 1: Archivo Excel (.xlsx) / CSV (.csv) -->
-    <div id="import-sec-file">
-      <form id="import-file-form" onsubmit="uploadImportFile(event)">
-        <div class="form-group" style="margin-bottom:16px;">
-          <label style="display:block; font-size:0.83rem; font-weight:600; color:var(--muted); margin-bottom:6px;">
-            Selecciona el archivo de Excel o CSV:
-          </label>
-          <input type="file" id="import-file-input" accept=".xlsx, .csv" required
-                 style="width:100%; padding:10px; border:1px solid var(--border); border-radius:8px; background:var(--surface2); color:var(--text);">
-          <div style="font-size:0.75rem; color:var(--muted); margin-top:8px; line-height:1.4;">
-            <strong>Formatos compatibles:</strong> Libro de Excel (.xlsx) o archivo separado por comas (.csv).<br>
-            <strong>Columnas detectadas automáticamente:</strong> Nombre, Empresa, Cargo, DNI/Código, Correo, Teléfono.
-          </div>
-        </div>
-        <div class="modal-actions" style="display:flex; justify-content:flex-end; gap:8px;">
-          <button type="button" class="btn" onclick="closeImportModal()">Cancelar</button>
-          <button type="submit" class="btn" id="btn-submit-import" style="background:var(--accent); border-color:var(--accent); color:#fff; font-weight:700;">
-            Subir y Procesar en MySQL
-          </button>
-        </div>
-      </form>
-    </div>
-
-    <!-- Pestaña 2: Sincronización OneDrive / SharePoint -->
-    <div id="import-sec-onedrive" style="display:none;">
-      <form id="import-onedrive-form" onsubmit="submitOneDriveSync(event)">
-        <div class="form-group" style="margin-bottom:16px;">
-          <label style="display:block; font-size:0.83rem; font-weight:600; color:var(--muted); margin-bottom:6px;">
-            Enlace compartido de OneDrive o SharePoint (.xlsx o .csv):
-          </label>
-          <input type="url" id="import-onedrive-url" required placeholder="https://1drv.ms/x/s!..."
-                 value="{{ active_event.onedrive_url or '' }}"
-                 style="width:100%; padding:10px; border:1px solid var(--border); border-radius:8px; background:var(--surface2); color:var(--text);">
-          <div style="font-size:0.75rem; color:var(--muted); margin-top:8px; line-height:1.4;">
-            El sistema descargará directamente la lista en vivo desde Microsoft OneDrive / SharePoint y la guardará en MySQL para este evento.
-          </div>
-        </div>
-        <div class="modal-actions" style="display:flex; justify-content:flex-end; gap:8px;">
-          <button type="button" class="btn" onclick="closeImportModal()">Cancelar</button>
-          <button type="submit" class="btn" id="btn-submit-onedrive" style="background:#0078d4; border-color:#0078d4; color:#fff; font-weight:700;">
-            Descargar y Sincronizar
-          </button>
-        </div>
-      </form>
-    </div>
-
-    <!-- Pestaña 3: Registro Manual Individual -->
-    <div id="import-sec-manual" style="display:none;">
-      <form id="import-manual-form" onsubmit="submitManualSingleGuest(event)">
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:10px;">
-          <div>
-            <label style="display:block; font-size:0.75rem; font-weight:600; color:var(--muted);">Código / DNI (Opcional):</label>
-            <input type="text" id="manual-guest-code" placeholder="Auto si vacío" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; background:var(--surface2); color:var(--text);">
-          </div>
-          <div>
-            <label style="display:block; font-size:0.75rem; font-weight:600; color:var(--muted);">Categoría:</label>
-            <select id="manual-guest-cat" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; background:var(--surface2); color:var(--text);">
-              <option value="GENERAL">General</option>
-              <option value="VIP">VIP</option>
-              <option value="PONENTE">Ponente</option>
-              <option value="PRENSA">Prensa</option>
-            </select>
-          </div>
-        </div>
-        <div style="margin-bottom:10px;">
-          <label style="display:block; font-size:0.75rem; font-weight:600; color:var(--muted);">Nombres y Apellidos *:</label>
-          <input type="text" id="manual-guest-name" required placeholder="Ej. Juan Pérez Ramos" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; background:var(--surface2); color:var(--text);">
-        </div>
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:10px;">
-          <div>
-            <label style="display:block; font-size:0.75rem; font-weight:600; color:var(--muted);">Empresa / Organización:</label>
-            <input type="text" id="manual-guest-company" placeholder="Ej. DACER Tech" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; background:var(--surface2); color:var(--text);">
-          </div>
-          <div>
-            <label style="display:block; font-size:0.75rem; font-weight:600; color:var(--muted);">Puesto / Cargo:</label>
-            <input type="text" id="manual-guest-pos" placeholder="Ej. Gerente de TI" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; background:var(--surface2); color:var(--text);">
-          </div>
-        </div>
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:16px;">
-          <div>
-            <label style="display:block; font-size:0.75rem; font-weight:600; color:var(--muted);">Correo:</label>
-            <input type="email" id="manual-guest-email" placeholder="correo@ejemplo.com" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; background:var(--surface2); color:var(--text);">
-          </div>
-          <div>
-            <label style="display:block; font-size:0.75rem; font-weight:600; color:var(--muted);">Teléfono:</label>
-            <input type="text" id="manual-guest-phone" placeholder="+51 987..." style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; background:var(--surface2); color:var(--text);">
-          </div>
-        </div>
-        <div class="modal-actions" style="display:flex; justify-content:flex-end; gap:8px;">
-          <button type="button" class="btn" onclick="closeImportModal()">Cancelar</button>
-          <button type="submit" class="btn" id="btn-submit-manual-guest" style="background:var(--accent); border-color:var(--accent); color:#fff; font-weight:700;">
-            Guardar Invitado en MySQL
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
-
-<!-- Modal para Gestión de Usuarios y Roles -->
-<div class="modal-backdrop" id="users-modal">
-  <div class="modal-box" style="max-width: 620px;">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-      <div class="modal-title" style="margin-bottom:0;">Gestión de Usuarios y Operadores</div>
-      <button class="btn" onclick="toggleNewUserForm()" style="font-size:0.8rem; padding:6px 10px; font-weight:600; background:var(--accent); color:#fff;">+ Nuevo Usuario</button>
-    </div>
-
-    <!-- Formulario para crear usuario (oculto por defecto) -->
-    <div id="new-user-form-container" style="display:none; background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:14px; margin-bottom:16px;">
-      <div style="font-weight:700; font-size:0.9rem; margin-bottom:10px;">Crear Nueva Cuenta</div>
-      <form id="create-user-form" onsubmit="submitCreateUser(event)">
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:10px;">
-          <div>
-            <label style="display:block; font-size:0.78rem; font-weight:600; color:var(--muted);">Usuario:</label>
-            <input type="text" id="new-user-name" required placeholder="Ej. operador1" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; background:var(--surface); color:var(--text);">
-          </div>
-          <div>
-            <label style="display:block; font-size:0.78rem; font-weight:600; color:var(--muted);">Contraseña:</label>
-            <input type="password" id="new-user-pass" required placeholder="Mínimo 6 caracteres" minlength="6" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; background:var(--surface); color:var(--text);">
-          </div>
-        </div>
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:12px;">
-          <div>
-            <label style="display:block; font-size:0.78rem; font-weight:600; color:var(--muted);">Rol de Acceso:</label>
-            <select id="new-user-role" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; background:var(--surface); color:var(--text);">
-              <option value="OPERATOR">Operador (Acreditación)</option>
-              <option value="ADMIN">Administrador (Gestión Eventos)</option>
-              <option value="SUPERADMIN">SuperAdmin (Control Total)</option>
-            </select>
-          </div>
-          <div>
-            <label style="display:block; font-size:0.78rem; font-weight:600; color:var(--muted);">Correo (Opcional):</label>
-            <input type="email" id="new-user-email" placeholder="operador@dacer.com" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; background:var(--surface); color:var(--text);">
-          </div>
-        </div>
-        <div style="display:flex; justify-content:flex-end; gap:8px;">
-          <button type="button" class="btn" onclick="toggleNewUserForm()" style="font-size:0.8rem; padding:6px 12px;">Cancelar</button>
-          <button type="submit" class="btn" style="font-size:0.8rem; padding:6px 12px; background:var(--accent); color:#fff; font-weight:600;">Guardar Usuario</button>
-        </div>
-      </form>
-    </div>
-
-    <!-- Lista de usuarios -->
-    <div style="max-height: 280px; overflow-y: auto; border:1px solid var(--border); border-radius:8px;">
-      <table style="width:100%; border-collapse:collapse; font-size:0.85rem; text-align:left;">
-        <thead>
-          <tr style="background:var(--surface2); border-bottom:1px solid var(--border);">
-            <th style="padding:10px 12px;">Usuario</th>
-            <th style="padding:10px 12px;">Rol</th>
-            <th style="padding:10px 12px;">Último Acceso</th>
-            <th style="padding:10px 12px; text-align:right;">Acción</th>
-          </tr>
-        </thead>
-        <tbody id="users-table-body">
-          <tr><td colspan="4" style="padding:16px; text-align:center; color:var(--muted);">Cargando usuarios...</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <div class="modal-actions" style="margin-top:16px; display:flex; justify-content:flex-end;">
-      <button type="button" class="btn" onclick="closeUsersModal()" style="font-weight:600;">Cerrar</button>
-    </div>
-  </div>
-</div>
-
-<!-- Modal para Analítica y Auditoría -->
-<div class="modal-backdrop" id="audit-modal">
-  <div class="modal-box" style="max-width: 680px;">
-    <div class="modal-title">Analítica del Evento y Registro de Auditoría</div>
-    
-    <!-- Resumen de Métricas -->
-    <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:10px; margin-bottom:16px;" id="analytics-summary-cards">
-      <div style="background:var(--surface2); padding:12px; border-radius:8px; border:1px solid var(--border); text-align:center;">
-        <div style="font-size:1.4rem; font-weight:800; color:var(--accent);" id="audit-stat-pct">0%</div>
-        <div style="font-size:0.75rem; color:var(--muted);">Tasa de Asistencia</div>
-      </div>
-      <div style="background:var(--surface2); padding:12px; border-radius:8px; border:1px solid var(--border); text-align:center;">
-        <div style="font-size:1.4rem; font-weight:800; color:var(--success);" id="audit-stat-qr">0</div>
-        <div style="font-size:0.75rem; color:var(--muted);">Acreditados por QR</div>
-      </div>
-      <div style="background:var(--surface2); padding:12px; border-radius:8px; border:1px solid var(--border); text-align:center;">
-        <div style="font-size:1.4rem; font-weight:800; color:#3b82f6;" id="audit-stat-facial">0</div>
-        <div style="font-size:0.75rem; color:var(--muted);">Reconocimiento Facial</div>
-      </div>
-    </div>
-
-    <div style="font-weight:700; font-size:0.9rem; margin-bottom:8px;">Historial Reciente de Auditoría (MySQL):</div>
-    <div style="max-height: 260px; overflow-y: auto; border:1px solid var(--border); border-radius:8px;">
-      <table style="width:100%; border-collapse:collapse; font-size:0.8rem; text-align:left;">
-        <thead>
-          <tr style="background:var(--surface2); border-bottom:1px solid var(--border);">
-            <th style="padding:8px 10px;">Fecha/Hora</th>
-            <th style="padding:8px 10px;">Acción</th>
-            <th style="padding:8px 10px;">Usuario</th>
-            <th style="padding:8px 10px;">Detalles</th>
-          </tr>
-        </thead>
-        <tbody id="audit-table-body">
-          <tr><td colspan="4" style="padding:16px; text-align:center; color:var(--muted);">Cargando registros...</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <div class="modal-actions" style="margin-top:16px; display:flex; justify-content:flex-end;">
-      <button type="button" class="btn" onclick="closeAuditModal()" style="font-weight:600;">Cerrar</button>
-    </div>
-  </div>
-</div>
-
-<div class="toast-container" id="toast-container"></div>
-
-<script>
-let currentDocuments = [];
-let currentActiveDocId = null;
-let kioskSettings = { method: 'both', mode: 'manual', face_threshold: 0.70 };
-
-async function loadKioskSettings() {
-  try {
-    const res = await fetch('/api/kiosk-settings');
-    const data = await res.json();
-    if (data.status === 'ok') {
-      kioskSettings = data.settings;
-      renderKioskSettingsUI();
-    }
-  } catch (err) {
-    console.warn('Error cargando kiosk-settings:', err);
-  }
-}
-
-function renderKioskSettingsUI() {
-  const m = kioskSettings.method || 'both';
-  const methBoth = document.getElementById('admin-meth-both');
-  const methFacial = document.getElementById('admin-meth-facial');
-  const methQr = document.getElementById('admin-meth-qr');
-  if (methBoth) methBoth.classList.toggle('active', m === 'both');
-  if (methFacial) methFacial.classList.toggle('active', m === 'facial');
-  if (methQr) methQr.classList.toggle('active', m === 'qr');
-
-  const descEl = document.getElementById('admin-method-desc');
-  if (descEl) {
-    if (m === 'both') descEl.textContent = 'Permite escanear código QR y reconocer rostros en simultáneo.';
-    else if (m === 'facial') descEl.textContent = 'Modo exclusivo: solo reconocimiento facial (cámara activa).';
-    else if (m === 'qr') descEl.textContent = 'Modo exclusivo: solo escaneo de código QR.';
-  }
-
-  const mode = kioskSettings.mode || 'manual';
-  const modeMan = document.getElementById('admin-mode-manual');
-  const modeAuto = document.getElementById('admin-mode-auto');
-  if (modeMan) modeMan.classList.toggle('active', mode === 'manual');
-  if (modeAuto) modeAuto.classList.toggle('active', mode === 'auto');
-
-  const th = kioskSettings.face_threshold !== undefined ? kioskSettings.face_threshold : 0.70;
-  const slider = document.getElementById('admin-threshold-slider');
-  if (slider) slider.value = th;
-  const badge = document.getElementById('threshold-val-badge');
-  if (badge) badge.textContent = Number(th).toFixed(2);
-}
-
-function onThresholdSliderInput(val) {
-  const badge = document.getElementById('threshold-val-badge');
-  if (badge) badge.textContent = Number(val).toFixed(2);
-}
-
-async function updateKioskSetting(key, val) {
-  kioskSettings[key] = val;
-  renderKioskSettingsUI();
-  try {
-    const res = await fetch('/api/kiosk-settings', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(kioskSettings),
-    });
-    const data = await res.json();
-    if (data.status === 'ok') {
-      showToast('Configuración del kiosko actualizada', 'success');
-    } else {
-      showToast('Error guardando configuración', 'error');
-    }
-  } catch (err) {
-    showToast('Error de conexión: ' + err.message, 'error');
-  }
-}
-
-
-async function loadPrinterStatus() {
-  try {
-    const res = await fetch('/api/printer/status');
-    const data = await res.json();
-    const dot = document.getElementById('printer-dot');
-    const info = document.getElementById('printer-info');
-    const purgeBtn = document.getElementById('btn-purge-queue');
-    const queueCount = document.getElementById('queue-jobs-count');
-
-    if (purgeBtn && queueCount) {
-      if (data.jobs_in_queue > 0) {
-        purgeBtn.style.display = 'inline-flex';
-        queueCount.textContent = data.jobs_in_queue;
-      } else {
-        purgeBtn.style.display = 'none';
-      }
-    }
-
-    if (data.online && data.is_ready) {
-      dot.className = 'printer-dot ready';
-      info.innerHTML = `<strong>${data.name}</strong> conectada y lista (Online • Rollo ${data.label} - 38x90mm)`;
-    } else if (data.installed) {
-      dot.className = 'printer-dot';
-      info.innerHTML = `<span style="color:var(--danger); font-weight:700;">${data.name} desconectada o apagada:</span> ${data.status_text} <span style="color:var(--muted); font-size:0.82rem;">(${data.details || 'Verifica el cable USB y encendido'})</span>`;
-    } else {
-      dot.className = 'printer-dot';
-      info.innerHTML = `<span style="color:var(--danger); font-weight:700;">${data.name} no detectada</span> (${data.status_text})`;
-    }
-  } catch (err) {
-    console.error('Error al comprobar impresora:', err);
-  }
-}
-
-async function manualCheckPrinterStatus() {
-  toast('Comprobando conexión física de la impresora…', 'warn');
-  await loadPrinterStatus();
-  try {
-    const res = await fetch('/api/printer/status');
-    const data = await res.json();
-    if (data.online && data.is_ready) {
-      toast(`Impresora ${data.name} conectada y lista (Online)`, 'success');
-    } else {
-      toast(`Impresora no disponible: ${data.status_text}`, 'error');
-    }
-  } catch (err) {
-    toast(`Error consultando impresora: ${err.message}`, 'error');
-  }
-}
-
-async function purgePrinterQueue() {
-  if (!confirm('¿Deseas cancelar y limpiar todos los trabajos pendientes de la cola de impresión de Windows?')) return;
-  try {
-    const res = await fetch('/api/printer/purge-jobs', { method: 'POST' });
-    const data = await res.json();
-    if (data.status === 'ok') {
-      toast('Cola de impresión limpiada exitosamente', 'success');
-      await loadPrinterStatus();
-    } else {
-      toast(`Error: ${data.error || 'No se pudo limpiar la cola'}`, 'error');
-    }
-  } catch (err) {
-    toast('Error al limpiar cola: ' + err.message, 'error');
-  }
-}
-
-async function loadGuests() {
-  const res = await fetch('/api/guests');
-  allGuests = await res.json();
-
-  const total   = allGuests.length;
-  const checked = allGuests.filter(g => g.checked_in).length;
-  document.getElementById('stat-total').textContent   = total;
-  document.getElementById('stat-checked').textContent = checked;
-  document.getElementById('stat-pending').textContent = total - checked;
-
-  renderGuestsTable(allGuests);
-}
-
-function renderGuestsTable(guests) {
-  const tbody = document.getElementById('guests-tbody');
-  if (!guests.length) {
-    if (!allGuests.length) {
-      tbody.innerHTML = `
-        <tr>
-          <td colspan="7" style="text-align:center; padding: 48px 20px;">
-            <div style="font-size: 2.2rem; margin-bottom: 8px;">📋</div>
-            <div style="font-weight: 600; font-size: 1.05rem; color: var(--text); margin-bottom: 6px;">No hay asistentes registrados en este evento</div>
-            <div style="color: var(--muted); font-size: 0.88rem; max-width: 420px; margin: 0 auto 16px auto;">
-              Puedes importar la lista desde un archivo Excel/CSV, sincronizar con un enlace de OneDrive o agregar asistentes manualmente.
+        <!-- Perfil de Usuario y Logout -->
+        <div class="flex items-center gap-2 pl-2 sm:border-l sm:border-slate-200">
+          <div class="flex items-center gap-2 px-2 py-1 rounded-lg bg-slate-50 border border-slate-200/80">
+            <div class="w-6 h-6 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs uppercase">
+              {{ current_user.username[0] if current_user.username else 'U' }}
             </div>
-            <button class="btn btn-primary" onclick="openImportModal()" style="padding: 8px 18px; font-size: 0.88rem; display: inline-flex; align-items: center; gap: 8px;">
-              <span>📥</span> Subir Invitados
-            </button>
-          </td>
-        </tr>`;
-    } else {
-      tbody.innerHTML = `
-        <tr>
-          <td colspan="7" style="text-align:center; padding: 36px 20px; color: var(--muted);">
-            <div style="font-size: 1.6rem; margin-bottom: 6px;">🔍</div>
-            <div style="font-weight: 600; color: var(--text);">No se encontraron invitados con los filtros aplicados</div>
-            <div style="font-size: 0.85rem; margin-top: 4px;">Intenta cambiar el término de búsqueda o restablecer los filtros.</div>
-          </td>
-        </tr>`;
-    }
-    return;
-  }
+            <div class="flex flex-col text-left leading-tight hidden sm:block">
+              <span class="text-xs font-semibold text-slate-800">{{ current_user.username }}</span>
+              <span class="text-[10px] text-slate-400 font-medium uppercase">{{ current_user.role }}</span>
+            </div>
+          </div>
 
-  tbody.innerHTML = '';
-  guests.forEach(g => {
-    const ts = g.checked_in_at
-      ? new Date(g.checked_in_at).toLocaleTimeString('es', { hour:'2-digit', minute:'2-digit' })
-      : '—';
-    const tr = document.createElement('tr');
-    tr.id = `row-${g.id}`;
-    tr.innerHTML = `
-      <td><code style="font-weight:700; color:var(--accent);">${g.id}</code></td>
-      <td><strong>${g.name}</strong></td>
-      <td style="color:var(--text)">${g.company || '—'}</td>
-      <td style="color:var(--muted); font-size:0.83rem;">${g.position || '—'}</td>
-      <td style="text-align:center;">
-        <button class="face-btn ${g.face_enrolled ? 'active' : ''}" onclick="openFaceModal('${g.id}', '${(g.name || '').replace(/'/g, "\\'")}')" title="Administrar fotos faciales">
-          ${g.face_count > 0 ? `${g.face_count}/4 fotos` : '+ Enrolar'}
+          <a href="/auth/logout" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors" title="Cerrar Sesión">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+            </svg>
+          </a>
+        </div>
+
+      </div>
+
+    </div>
+  </header>
+
+  <!-- ========================================================================= -->
+  <!-- CONTENIDO PRINCIPAL                                                       -->
+  <!-- ========================================================================= -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+    <!-- 1. BANNER DE DIAGNÓSTICO DE IMPRESORA BROTHER QL-800 -->
+    <div id="printer-banner" class="bg-white border border-slate-200 rounded-xl p-4 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <span id="printer-dot" class="printer-dot"></span>
+        <div id="printer-info" class="text-sm font-medium text-slate-700">
+          Comprobando conexión de la impresora Brother QL-800...
+        </div>
+      </div>
+      <div class="flex items-center gap-2 self-end sm:self-auto">
+        <button type="button" id="btn-purge-queue" onclick="purgePrinterQueue()" style="display:none;" class="px-3 py-1.5 text-xs font-medium text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg transition-colors flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+          </svg>
+          <span>Limpiar cola (<span id="queue-jobs-count">0</span>)</span>
         </button>
-      </td>
-      <td>
-        <span class="status-dot ${g.checked_in ? 'checked' : 'pending'}"></span>
-        <span style="font-size:0.85rem; font-weight:600; color:${g.checked_in ? 'var(--success)' : 'var(--muted)'};">
-          ${g.checked_in ? 'Registrado' : 'Pendiente'}
+
+        <button type="button" id="btn-reconnect-printer" onclick="manualCheckPrinterStatus()" class="px-3 py-1.5 text-xs font-medium text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 rounded-lg shadow-xs transition-colors flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+          </svg>
+          <span>Comprobar Conexión</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 2. CONTROLES DE KIOSKO (SEGMENTED TABS PLANOS) -->
+    <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      
+      <!-- Método de Acreditación -->
+      <div class="space-y-1.5">
+        <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Método de Acreditación en Kiosko</div>
+        <div class="bg-slate-100 p-1 rounded-lg inline-flex items-center gap-1 border border-slate-200/60">
+          <button type="button" id="admin-meth-both" class="segmented-btn active" onclick="updateKioskSetting('method', 'both')">
+            <span>Ambos (Facial + QR)</span>
+          </button>
+          <button type="button" id="admin-meth-facial" class="segmented-btn" onclick="updateKioskSetting('method', 'facial')">
+            <span>Solo Facial</span>
+          </button>
+          <button type="button" id="admin-meth-qr" class="segmented-btn" onclick="updateKioskSetting('method', 'qr')">
+            <span>Solo QR</span>
+          </button>
+        </div>
+        <p id="admin-method-desc" class="text-xs text-slate-500">Permite escanear código QR y reconocer rostros en simultáneo.</p>
+      </div>
+
+      <!-- Modo de Impresión -->
+      <div class="space-y-1.5 lg:text-right">
+        <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Modo de Impresión de Etiquetas</div>
+        <div class="bg-slate-100 p-1 rounded-lg inline-flex items-center gap-1 border border-slate-200/60">
+          <button type="button" id="admin-mode-auto" class="segmented-btn active" onclick="updateKioskSetting('mode', 'auto')">
+            <span>Automática al Validar</span>
+          </button>
+          <button type="button" id="admin-mode-manual" class="segmented-btn" onclick="updateKioskSetting('mode', 'manual')">
+            <span>Manual por Operador</span>
+          </button>
+        </div>
+        <div class="text-xs text-slate-500 flex items-center lg:justify-end gap-1.5">
+          <span>Umbral Biométrico Facial:</span>
+          <span id="threshold-val-badge" class="font-semibold text-slate-800">0.70</span>
+          <span class="text-slate-400 text-[11px]">(Fijo)</span>
+          <input type="range" id="admin-threshold-slider" value="0.70" style="display:none;">
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 3. TARJETAS DE MÉTRICAS (KPIS PLANOS) -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      
+      <!-- Total Registrados -->
+      <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs flex items-center justify-between">
+        <div>
+          <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Registrados</div>
+          <div id="stat-total" class="text-3xl font-bold text-slate-900 mt-1">0</div>
+          <div class="text-xs text-slate-400 mt-0.5">En el evento activo</div>
+        </div>
+        <div class="w-10 h-10 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Ingresados / Acreditados -->
+      <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs flex items-center justify-between">
+        <div>
+          <div class="text-xs font-semibold text-emerald-700 uppercase tracking-wider">Acreditados</div>
+          <div id="stat-checked" class="text-3xl font-bold text-emerald-600 mt-1">0</div>
+          <div class="text-xs text-slate-400 mt-0.5">Ingresaron a sala</div>
+        </div>
+        <div class="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Pendientes de Ingreso -->
+      <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs flex items-center justify-between">
+        <div>
+          <div class="text-xs font-semibold text-amber-700 uppercase tracking-wider">Pendientes</div>
+          <div id="stat-pending" class="text-3xl font-bold text-amber-600 mt-1">0</div>
+          <div class="text-xs text-slate-400 mt-0.5">Por ingresar</div>
+        </div>
+        <div class="w-10 h-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Tasa de Asistencia / Aforo -->
+      <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs flex flex-col justify-between">
+        <div class="flex items-center justify-between">
+          <div class="text-xs font-semibold text-blue-700 uppercase tracking-wider">Aforo Asistencia</div>
+          <span id="stat-checked-pct" class="text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full">0%</span>
+        </div>
+        <div class="mt-3">
+          <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+            <div id="disp-progress" class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: 0%;"></div>
+          </div>
+          <div class="flex justify-between items-center text-[11px] text-slate-400 mt-1.5">
+            <span>0%</span>
+            <span>Meta: 100%</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 4. TOOLBAR DE BÚSQUEDA, FILTROS Y ACCIONES -->
+    <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+      
+      <!-- Buscador y Filtros -->
+      <div class="flex items-center gap-2 flex-1 flex-wrap">
+        <div class="relative flex-1 min-w-[240px]">
+          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <svg class="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+          </div>
+          <input type="text" id="search-input" oninput="filterGuests()" placeholder="Buscar por nombre, empresa o código..." class="w-full pl-9 pr-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
+        </div>
+
+        <select id="filter-status" onchange="filterGuests()" class="px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+          <option value="all">Todos los estados</option>
+          <option value="checked">Acreditados</option>
+          <option value="pending">Pendientes</option>
+        </select>
+
+        <select id="filter-face" onchange="filterGuests()" class="px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+          <option value="all">Todos los rostros</option>
+          <option value="enrolled">Con biometría facial</option>
+          <option value="none">Sin biometría</option>
+        </select>
+
+        <span id="guests-count-badge" class="px-2.5 py-1 text-xs font-semibold text-slate-600 bg-slate-100 rounded-full border border-slate-200">
+          0 asistentes
         </span>
-      </td>
-      <td style="font-size:0.85rem; color:var(--muted);">${ts}</td>
-      <td style="text-align:center;">
-        <div style="display:flex; gap:6px; justify-content:center;">
-          <button class="btn-action print" onclick="manualPrintGuest('${g.id}')" title="Imprimir etiqueta en Brother QL-800">
-            Imprimir
+      </div>
+
+      <!-- Acciones de Gestión de Lista -->
+      <div class="flex items-center gap-2 flex-wrap self-end md:self-auto">
+        <button type="button" onclick="openAddGuestModal()" class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-white bg-slate-800 hover:bg-slate-900 rounded-lg shadow-xs transition-colors">
+          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+          </svg>
+          <span>Nuevo Asistente</span>
+        </button>
+
+        <button type="button" onclick="confirmReset()" class="px-2.5 py-2 text-xs font-medium text-rose-700 hover:bg-rose-50 border border-rose-200 rounded-lg transition-colors" title="Restablecer asistencia de todos a pendiente">
+          Reiniciar Asistencias
+        </button>
+
+        <button type="button" onclick="confirmDeleteAllFaces()" class="px-2.5 py-2 text-xs font-medium text-slate-600 hover:text-rose-700 hover:bg-rose-50 border border-slate-200 rounded-lg transition-colors" title="Eliminar biometrías faciales almacenadas">
+          Limpiar Rostros
+        </button>
+      </div>
+
+    </div>
+
+    <!-- 5. TABLA DE DATOS TRADICIONAL Y DILIGENTE -->
+    <div class="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-slate-200 text-left">
+          <thead class="bg-slate-50/80">
+            <tr>
+              <th scope="col" class="w-24 px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">ID</th>
+              <th scope="col" class="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Invitado / Empresa</th>
+              <th scope="col" class="w-44 px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Cargo</th>
+              <th scope="col" class="w-36 px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Estado</th>
+              <th scope="col" class="w-32 px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Hora</th>
+              <th scope="col" class="w-36 px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider text-center">Biometría</th>
+              <th scope="col" class="w-36 px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="guests-tbody" class="divide-y divide-slate-100 bg-white text-sm">
+            <tr>
+              <td colspan="7" class="px-4 py-12 text-center text-slate-400">
+                Cargando lista de asistentes...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: REGISTRAR / EDITAR INVITADO                                        -->
+  <!-- ========================================================================= -->
+  <div class="modal-backdrop" id="guest-modal">
+    <div class="bg-white border border-slate-200 rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <h3 class="text-base font-bold text-slate-900" id="guest-modal-title">Registrar Nuevo Invitado</h3>
+        <button type="button" onclick="closeAddGuestModal()" class="text-slate-400 hover:text-slate-600 p-1">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <form id="guest-form" onsubmit="submitGuestForm(event)" class="space-y-3.5">
+        <div>
+          <label for="m-id" class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Código / ID *</label>
+          <input type="text" id="m-id" required placeholder="Ej. INV-011" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg text-slate-900 font-mono focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+        </div>
+
+        <div>
+          <label for="m-name" class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Nombres y Apellidos *</label>
+          <input type="text" id="m-name" required placeholder="Ej. Juan Pérez Rodríguez" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+        </div>
+
+        <div>
+          <label for="m-company" class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Empresa / Organización</label>
+          <input type="text" id="m-company" placeholder="Ej. Corporación Andina S.A." class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+        </div>
+
+        <div>
+          <label for="m-position" class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Cargo / Puesto</label>
+          <input type="text" id="m-position" placeholder="Ej. Gerente de Operaciones" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+          <button type="button" onclick="closeAddGuestModal()" class="px-4 py-2 text-xs font-medium text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 rounded-lg transition-colors">Cancelar</button>
+          <button type="submit" class="px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-xs transition-colors">Guardar Invitado</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: ENROLAMIENTO FACIAL CCTV ERGONÓMICO                               -->
+  <!-- ========================================================================= -->
+  <div class="modal-backdrop" id="face-modal">
+    <div class="bg-white border border-slate-200 rounded-2xl shadow-xl w-full max-w-xl p-6 space-y-4">
+      
+      <!-- Cabecera -->
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div>
+          <h3 class="text-base font-bold text-slate-900">Enrolamiento Biométrico Facial</h3>
+          <div class="flex items-center gap-2 mt-0.5">
+            <span id="face-modal-guest-name" class="text-xs font-semibold text-slate-700">—</span>
+            <span class="text-slate-300">•</span>
+            <span id="face-modal-guest-id" class="text-xs font-mono text-slate-400">—</span>
+          </div>
+        </div>
+        <button type="button" onclick="closeFaceModal()" class="text-slate-400 hover:text-slate-600 p-1">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <!-- Resumen de Biometría & Consejos -->
+      <div class="flex items-center justify-between p-3 rounded-xl bg-blue-50/70 border border-blue-100 text-xs text-blue-900">
+        <div class="flex items-center gap-2">
+          <svg class="w-4 h-4 text-blue-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          <span>Recomendado: 2 a 4 fotos (frente, leve ángulo y sonrisa).</span>
+        </div>
+        <span class="font-bold text-blue-700 bg-white px-2 py-0.5 rounded-full border border-blue-200" id="face-count-badge">0 / 4</span>
+      </div>
+
+      <!-- Galería de Fotos Existentes -->
+      <div id="face-gallery-container" class="grid grid-cols-4 gap-2.5 min-h-[70px]"></div>
+
+      <!-- Mensaje dinámico de estado -->
+      <div id="face-status-msg" style="display:none;" class="p-3 rounded-lg text-xs font-medium"></div>
+
+      <!-- Pestañas: Cámara Web vs Subir Archivo -->
+      <div class="border-t border-slate-100 pt-3">
+        <div class="flex gap-2 mb-3">
+          <button type="button" id="tab-webcam-btn" onclick="switchFaceTab('webcam')" class="flex-1 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 text-slate-800 border border-slate-200">
+            Cámara Web
           </button>
-          <button class="btn-action status-toggle" onclick="toggleGuestStatus('${g.id}')" title="Cambiar estado entre Registrado y Pendiente">
-            ${g.checked_in ? 'Desmarcar' : 'Registrar'}
-          </button>
-          <button class="btn-action delete" onclick="deleteGuest('${g.id}', '${g.name}')" title="Eliminar invitado del CSV">
-            Eliminar
+          <button type="button" id="tab-upload-btn" onclick="switchFaceTab('upload')" class="flex-1 py-1.5 text-xs font-medium rounded-lg text-slate-500 hover:text-slate-700">
+            Subir Archivo
           </button>
         </div>
-      </td>`;
-    tbody.appendChild(tr);
-  });
-}
 
-function filterTable() {
-  const q = document.getElementById('filter-input').value.toLowerCase().trim();
-  const statusFilter = document.getElementById('status-filter').value;
-
-  const filtered = allGuests.filter(g => {
-    const matchText = (g.id || '').toLowerCase().includes(q) ||
-                      (g.name || '').toLowerCase().includes(q) ||
-                      (g.company || '').toLowerCase().includes(q) ||
-                      (g.position || '').toLowerCase().includes(q);
-    let matchStatus = true;
-    if (statusFilter === 'checked') matchStatus = g.checked_in === true;
-    if (statusFilter === 'pending') matchStatus = !g.checked_in;
-
-    return matchText && matchStatus;
-  });
-
-  renderGuestsTable(filtered);
-}
-
-/* ── Acciones Administrativas ── */
-
-async function manualPrintGuest(id) {
-  toast(`Enviando a imprimir ticket: ${id}…`, 'warn');
-  try {
-    const prRes = await fetch(`/api/print/${encodeURIComponent(id)}?force=true`, { method: 'POST' });
-    const prData = await prRes.json();
-    const ok = ['ok', 'simulated'].includes(prData.print?.status);
-    if (ok) {
-      toast(`Ticket emitido y check-in confirmado para ${id}`, 'success');
-      await loadGuests();
-      filterTable();
-    } else {
-      toast(`Error de impresión: ${prData.print?.message || prData.message || 'Fallo desconocido'}`, 'error');
-    }
-  } catch (err) {
-    toast(`Error de red al imprimir: ${err.message}`, 'error');
-  }
-}
-
-async function toggleGuestStatus(id) {
-  try {
-    const res = await fetch(`/api/guest/${encodeURIComponent(id)}/status`, { method: 'POST' });
-    const data = await res.json();
-    if (data.status === 'ok') {
-      toast(`Estado actualizado: ${id} → ${data.guest?.checked_in ? 'Registrado' : 'Pendiente'}`, 'success');
-      await loadGuests();
-      filterTable();
-    } else {
-      toast(`Error: ${data.error || 'No se pudo actualizar'}`, 'error');
-    }
-  } catch (err) {
-    toast(`Error: ${err.message}`, 'error');
-  }
-}
-
-async function deleteGuest(id, name) {
-  if (!confirm(`¿Estás seguro de eliminar a "${name}" (${id})?\nEsta acción eliminará al invitado del archivo CSV.`)) return;
-
-  try {
-    const res = await fetch(`/api/guest/${encodeURIComponent(id)}`, { method: 'DELETE' });
-    const data = await res.json();
-    if (data.status === 'ok') {
-      toast(`Invitado ${id} eliminado`, 'warn');
-      await loadGuests();
-      filterTable();
-    } else {
-      toast(`Error: ${data.error || 'No se pudo eliminar'}`, 'error');
-    }
-  } catch (err) {
-    toast(`Error al eliminar: ${err.message}`, 'error');
-  }
-}
-
-function openAddGuestModal() {
-  document.getElementById('guest-form').reset();
-  // Sugerir ID consecutivo
-  const nextNum = allGuests.length + 1;
-  document.getElementById('m-id').value = `INV-${String(nextNum).padStart(3, '0')}`;
-  document.getElementById('guest-modal').classList.add('open');
-}
-
-function closeAddGuestModal() {
-  document.getElementById('guest-modal').classList.remove('open');
-}
-
-async function submitGuestForm(e) {
-  e.preventDefault();
-  const gid      = document.getElementById('m-id').value.trim().toUpperCase();
-  const name     = document.getElementById('m-name').value.trim();
-  const company  = document.getElementById('m-company').value.trim();
-  const position = document.getElementById('m-position').value.trim();
-
-  try {
-    const res = await fetch('/api/guest', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: gid, name, company, position })
-    });
-    const data = await res.json();
-    if (data.status === 'ok') {
-      toast(`Invitado ${gid} guardado en CSV`, 'success');
-      closeAddGuestModal();
-      await loadGuests();
-      filterTable();
-    } else {
-      toast(`Error: ${data.error}`, 'error');
-    }
-  } catch (err) {
-    toast(`Error de red: ${err.message}`, 'error');
-  }
-}
-
-
-
-async function confirmReset() {
-  if (!confirm('¿Resetear TODOS los check-ins de los invitados?\nEsta acción devolverá a todos los invitados a estado Pendiente.')) return;
-  await fetch('/api/reset', { method: 'POST' });
-  toast('Todos los check-ins han sido reseteados', 'warn');
-  await loadGuests();
-  filterTable();
-}
-
-async function confirmDeleteAllFaces() {
-  if (!confirm('¿Estás seguro de que deseas eliminar TODAS las fotos y modelos faciales de todos los invitados?\n\nEsta acción borrará todas las imágenes biométricas del servidor. Deberás enrolar las fotos de los invitados nuevamente.')) return;
-  try {
-    const res = await fetch('/api/faces/delete-all', { method: 'POST' });
-    const data = await res.json();
-    if (data.status === 'ok') {
-      toast(data.message, 'warn');
-      await loadGuests();
-      filterTable();
-    } else {
-      toast(data.error || 'No se pudieron eliminar las fotos faciales', 'error');
-    }
-  } catch (err) {
-    toast(`Error de conexión: ${err.message}`, 'error');
-  }
-}
-
-function toast(msg, type='success') {
-  const c = document.getElementById('toast-container');
-  const t = document.createElement('div');
-  t.className = `toast ${type}`;
-  t.textContent = msg;
-  c.appendChild(t);
-  setTimeout(() => t.remove(), 4500);
-}
-
-/* ── Gestión y Enrolamiento Facial ── */
-let currentFaceGuestId = null;
-let currentFaceGuestName = '';
-let faceWebcamStream = null;
-let currentFaceTab = 'webcam';
-let currentGuestFacesList = [];
-
-async function openFaceModal(id, name) {
-  currentFaceGuestId = id;
-  currentFaceGuestName = name;
-  document.getElementById('face-modal-guest-id').textContent = `ID: ${id}`;
-  document.getElementById('face-modal-guest-name').textContent = name;
-  
-  clearFaceStatus();
-  document.getElementById('face-modal').classList.add('open');
-  
-  await loadGuestFaces(id);
-  switchFaceTab('webcam');
-}
-
-function closeFaceModal() {
-  stopFaceWebcam();
-  document.getElementById('face-modal').classList.remove('open');
-  currentFaceGuestId = null;
-  loadGuests();
-}
-
-function clearFaceStatus() {
-  const el = document.getElementById('face-status-msg');
-  el.style.display = 'none';
-  el.className = '';
-  el.textContent = '';
-}
-
-function showFaceStatus(msg, type='info') {
-  const el = document.getElementById('face-status-msg');
-  el.style.display = 'block';
-  el.textContent = msg;
-  if (type === 'error') {
-    el.style.background = 'rgba(239, 68, 68, 0.2)';
-    el.style.color = '#fca5a5';
-    el.style.border = '1px solid rgba(239, 68, 68, 0.4)';
-  } else if (type === 'success') {
-    el.style.background = 'rgba(16, 185, 129, 0.2)';
-    el.style.color = '#6ee7b7';
-    el.style.border = '1px solid rgba(16, 185, 129, 0.4)';
-  } else {
-    el.style.background = 'rgba(204, 35, 43, 0.15)';
-    el.style.color = '#ff9aa0';
-    el.style.border = '1px solid rgba(204, 35, 43, 0.35)';
-  }
-}
-
-async function loadGuestFaces(id) {
-  try {
-    const res = await fetch(`/api/guest/${encodeURIComponent(id)}/faces`);
-    const data = await res.json();
-    currentGuestFacesList = data.faces || [];
-    renderFaceGallery(currentGuestFacesList);
-  } catch (err) {
-    showFaceStatus(`Error cargando fotos: ${err.message}`, 'error');
-  }
-}
-
-function renderFaceGallery(faces) {
-  const container = document.getElementById('face-gallery-container');
-  container.innerHTML = '';
-  
-  const total = faces.length;
-  document.getElementById('face-count-badge').textContent = `${total} / 4`;
-  
-  for (let i = 0; i < 4; i++) {
-    if (i < total) {
-      const f = faces[i];
-      const card = document.createElement('div');
-      card.className = 'face-card';
-      card.innerHTML = `
-        <img src="${f.thumb_url || f.url}" alt="Foto ${i+1}">
-        <button type="button" class="del-btn" onclick="deleteFace('${f.image_id}')" title="Eliminar esta foto">✕</button>
-      `;
-      container.appendChild(card);
-    } else {
-      const empty = document.createElement('div');
-      empty.className = 'face-card face-card-empty';
-      empty.innerHTML = `<span>Espacio ${i+1}<br><small style="color:var(--muted)">Disponible</small></span>`;
-      container.appendChild(empty);
-    }
-  }
-
-  const addSec = document.getElementById('face-add-section');
-  if (total >= 4) {
-    addSec.style.display = 'none';
-    showFaceStatus('Capacidad completa (4/4 fotos registradas). Para agregar una nueva, elimina alguna foto previa.', 'success');
-    stopFaceWebcam();
-  } else {
-    addSec.style.display = 'block';
-    if (total === 0) {
-      document.getElementById('face-capture-hint').textContent = 'Paso 1 de 4: Foto frontal con expresión neutra.';
-    } else if (total === 1) {
-      document.getElementById('face-capture-hint').textContent = 'Paso 2 de 4: Sonríe levemente o ajusta tu postura.';
-    } else if (total === 2) {
-      document.getElementById('face-capture-hint').textContent = 'Paso 3 de 4: Gira sutilmente la cabeza hacia la derecha.';
-    } else {
-      document.getElementById('face-capture-hint').textContent = 'Paso 4 de 4: Gira sutilmente la cabeza hacia la izquierda.';
-    }
-  }
-}
-
-function switchFaceTab(tab) {
-  currentFaceTab = tab;
-  const btnWebcam = document.getElementById('tab-webcam-btn');
-  const btnUpload = document.getElementById('tab-upload-btn');
-  const secWebcam = document.getElementById('face-tab-webcam');
-  const secUpload = document.getElementById('face-tab-upload');
-
-  if (tab === 'webcam') {
-    btnWebcam.style.background = 'var(--surface2)';
-    btnUpload.style.background = 'transparent';
-    secWebcam.style.display = 'block';
-    secUpload.style.display = 'none';
-    startFaceWebcam();
-  } else {
-    btnUpload.style.background = 'var(--surface2)';
-    btnWebcam.style.background = 'transparent';
-    secUpload.style.display = 'block';
-    secWebcam.style.display = 'none';
-    stopFaceWebcam();
-  }
-}
-
-async function startFaceWebcam() {
-  if (currentGuestFacesList.length >= 4) return;
-  const video = document.getElementById('face-webcam');
-  if (faceWebcamStream) return;
-
-  try {
-    faceWebcamStream = await navigator.mediaDevices.getUserMedia({
-      video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' },
-      audio: false
-    });
-    video.srcObject = faceWebcamStream;
-    video.onloadedmetadata = async () => {
-      try { await video.play(); } catch(e) {}
-    };
-    try { await video.play(); } catch(e) {}
-  } catch (err) {
-    showFaceStatus(`No se pudo acceder a la cámara web: ${err.message}`, 'error');
-  }
-}
-
-function stopFaceWebcam() {
-  if (faceWebcamStream) {
-    faceWebcamStream.getTracks().forEach(t => t.stop());
-    faceWebcamStream = null;
-  }
-  const video = document.getElementById('face-webcam');
-  if (video) video.srcObject = null;
-}
-
-async function captureFaceSnapshot() {
-  if (!currentFaceGuestId) return;
-  const video = document.getElementById('face-webcam');
-  if (!video.videoWidth || !video.videoHeight) {
-    showFaceStatus('La cámara web aún no está transmitiendo video. Espera un momento.', 'error');
-    return;
-  }
-
-  const canvas = document.createElement('canvas');
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-  const ctx = canvas.getContext('2d');
-  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-  const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
-
-  const btn = document.getElementById('btn-snap-face');
-  btn.disabled = true;
-  btn.textContent = 'Analizando rostro…';
-  clearFaceStatus();
-
-  try {
-    const res = await fetch(`/api/guest/${encodeURIComponent(currentFaceGuestId)}/face`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ image: dataUrl, image_base64: dataUrl })
-    });
-    const data = await res.json();
-    if (data.status === 'ok' || data.success) {
-      showFaceStatus(`${data.message || 'Rostro enrolado correctamente'}`, 'success');
-      await loadGuestFaces(currentFaceGuestId);
-      await loadGuests();
-    } else {
-      showFaceStatus(`${data.error || 'No se detectó rostro nítido'}`, 'error');
-    }
-  } catch (err) {
-    showFaceStatus(`Error de comunicación: ${err.message}`, 'error');
-  } finally {
-    btn.disabled = false;
-    btn.textContent = 'Tomar Foto';
-  }
-}
-
-async function onFaceFilesSelected(files) {
-  if (!files || !files.length || !currentFaceGuestId) return;
-  clearFaceStatus();
-
-  for (let i = 0; i < files.length; i++) {
-    if (currentGuestFacesList.length >= 4) {
-      showFaceStatus('Límite de 4 fotos alcanzado.', 'warn');
-      break;
-    }
-    const file = files[i];
-    const formData = new FormData();
-    formData.append('image', file);
-    formData.append('file', file);
-
-    try {
-      showFaceStatus(`Subiendo y analizando ${file.name}…`, 'info');
-      const res = await fetch(`/api/guest/${encodeURIComponent(currentFaceGuestId)}/face`, {
-        method: 'POST',
-        body: formData
-      });
-      const data = await res.json();
-      if (data.status === 'ok' || data.success) {
-        showFaceStatus(`${file.name}: Registrado exitosamente`, 'success');
-        await loadGuestFaces(currentFaceGuestId);
-        await loadGuests();
-      } else {
-        showFaceStatus(`${file.name}: ${data.error || 'No se detectó rostro'}`, 'error');
-      }
-    } catch (err) {
-      showFaceStatus(`Error con ${file.name}: ${err.message}`, 'error');
-    }
-  }
-  document.getElementById('face-file-input').value = '';
-}
-
-async function deleteFace(imageId) {
-  if (!confirm('¿Eliminar esta foto de referencia facial?')) return;
-  clearFaceStatus();
-  try {
-    const res = await fetch(`/api/guest/${encodeURIComponent(currentFaceGuestId)}/face?image_id=${encodeURIComponent(imageId)}`, {
-      method: 'DELETE'
-    });
-    const data = await res.json();
-    if (data.status === 'ok' || data.success) {
-      showFaceStatus('Foto eliminada.', 'info');
-      await loadGuestFaces(currentFaceGuestId);
-      await loadGuests();
-    } else {
-      showFaceStatus(`Error eliminando foto: ${data.error}`, 'error');
-    }
-  } catch (err) {
-    showFaceStatus(`Error de red: ${err.message}`, 'error');
-  }
-}
-
-function escapeHtml(str) {
-  if (str === null || str === undefined) return '';
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
-
-function showToast(msg, type='success') {
-  toast(msg, type);
-}
-
-/* ── Modal de Gestión y Selección de Eventos ── */
-function openEventsModal() {
-  const modal = document.getElementById('events-modal');
-  if (modal) modal.classList.add('open');
-  loadEventsList();
-}
-
-function closeEventsModal() {
-  const modal = document.getElementById('events-modal');
-  if (modal) modal.classList.remove('open');
-  const form = document.getElementById('new-event-form-container');
-  if (form) form.style.display = 'none';
-}
-
-function toggleNewEventForm() {
-  const form = document.getElementById('new-event-form-container');
-  if (!form) return;
-  const isHidden = form.style.display === 'none' || form.style.display === '';
-  form.style.display = isHidden ? 'block' : 'none';
-  if (isHidden) {
-    document.getElementById('new-event-name').value = '';
-    document.getElementById('new-event-location').value = '';
-    document.getElementById('new-event-onedrive').value = '';
-    document.getElementById('new-event-desc').value = '';
-  }
-}
-
-async function loadEventsList() {
-  const tbody = document.getElementById('events-table-body');
-  if (!tbody) return;
-  tbody.innerHTML = '<tr><td colspan="5" style="padding:20px; text-align:center; color:var(--muted);">Cargando eventos...</td></tr>';
-  try {
-    const res = await fetch('/admin/api/events');
-    const data = await res.json();
-    if (data.status === 'ok' && data.events) {
-      if (!data.events.length) {
-        tbody.innerHTML = '<tr><td colspan="5" style="padding:20px; text-align:center; color:var(--muted);">No hay eventos registrados.</td></tr>';
-        return;
-      }
-      tbody.innerHTML = data.events.map(ev => `
-        <tr style="border-bottom:1px solid var(--border); ${ev.is_active ? 'background:rgba(220,38,38,0.03);' : ''}">
-          <td style="padding:10px 12px;">
-            <div style="font-weight:700; color:var(--text);">${escapeHtml(ev.name)}</div>
-            <div style="font-size:0.75rem; color:var(--muted);">${escapeHtml(ev.location || 'Sede central')} ${ev.onedrive_url ? '• <span style="color:#0078d4;">OneDrive</span>' : ''}</div>
-          </td>
-          <td style="padding:10px 12px; text-align:center; font-weight:700;">${ev.total_guests}</td>
-          <td style="padding:10px 12px; text-align:center;">
-            <span style="color:var(--success); font-weight:700;">${ev.checked_in}</span>
-            <span style="font-size:0.75rem; color:var(--muted);">(${ev.percentage}%)</span>
-          </td>
-          <td style="padding:10px 12px; text-align:center;">
-            ${ev.is_active
-              ? '<span style="display:inline-block; padding:2px 8px; border-radius:12px; font-size:0.72rem; font-weight:800; background:#dcfce7; color:#15803d; border:1px solid #bbf7d0;">ACTIVO</span>'
-              : '<span style="display:inline-block; padding:2px 8px; border-radius:12px; font-size:0.72rem; font-weight:600; background:var(--surface2); color:var(--muted);">Inactivo</span>'
-            }
-          </td>
-          <td style="padding:10px 12px; text-align:right;">
-            <div style="display:flex; justify-content:flex-end; gap:6px;">
-              ${!ev.is_active
-                ? `<button class="btn" style="padding:4px 8px; font-size:0.75rem; font-weight:700; background:var(--accent); color:#fff;" onclick="activateEvent(${ev.id})">Activar</button>`
-                : ''
-              }
-              <button class="btn danger" style="padding:4px 8px; font-size:0.75rem;" onclick="deleteEvent(${ev.id}, '${escapeHtml(ev.name)}')" ${data.events.length <= 1 ? 'disabled title="No puedes eliminar el único evento"' : ''}>Eliminar</button>
+        <!-- Pestaña Cámara Web -->
+        <div id="face-tab-webcam" class="space-y-3">
+          <div class="relative w-full max-w-sm mx-auto h-56 bg-slate-950 rounded-xl overflow-hidden border border-slate-200 flex items-center justify-center">
+            <video id="face-webcam" autoplay playsinline muted class="w-full h-full object-cover"></video>
+            <!-- Guía ovalada sutil para encuadre -->
+            <div class="absolute inset-0 pointer-events-none flex items-center justify-center">
+              <div class="w-32 h-44 rounded-full border-2 border-dashed border-white/50"></div>
             </div>
-          </td>
-        </tr>
-      `).join('');
-    } else {
-      tbody.innerHTML = `<tr><td colspan="5" style="padding:20px; text-align:center; color:var(--danger);">${data.error || 'Error al cargar eventos'}</td></tr>`;
+          </div>
+          <p id="face-capture-hint" class="text-center text-xs text-slate-500">Ubica el rostro dentro del óvalo guía y captura la foto.</p>
+          <div class="flex justify-center">
+            <button type="button" id="btn-snap-face" onclick="captureFaceSnapshot()" class="inline-flex items-center gap-2 px-5 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-xs transition-colors">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+              </svg>
+              <span>Capturar Foto</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Pestaña Subir Archivo -->
+        <div id="face-tab-upload" style="display:none;" class="space-y-3">
+          <div class="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center bg-slate-50 hover:bg-slate-100/60 transition-colors cursor-pointer" onclick="document.getElementById('face-file-input').click()">
+            <svg class="w-8 h-8 text-slate-400 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            </svg>
+            <p class="text-xs text-slate-600 font-medium">Selecciona de 1 a 4 fotos (JPG, PNG)</p>
+            <p class="text-[11px] text-slate-400 mt-1">Los vectores biométricos se extraen directamente a MySQL</p>
+            <input type="file" id="face-file-input" accept="image/*" multiple onchange="onFaceFilesSelected(this.files)" style="display:none;">
+          </div>
+        </div>
+      </div>
+
+      <!-- Acciones de cierre -->
+      <div class="flex justify-end pt-3 border-t border-slate-100">
+        <button type="button" onclick="closeFaceModal()" class="px-4 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors">
+          Listo / Cerrar
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: GESTIÓN MULTI-EVENTO                                              -->
+  <!-- ========================================================================= -->
+  <div class="modal-backdrop" id="events-modal">
+    <div class="bg-white border border-slate-200 rounded-2xl shadow-xl w-full max-w-2xl p-6 space-y-4">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div>
+          <h3 class="text-base font-bold text-slate-900">Gestión de Eventos</h3>
+          <p class="text-xs text-slate-500">Selecciona el evento en ejecución o crea uno nuevo en MySQL</p>
+        </div>
+        <button type="button" onclick="closeEventsModal()" class="text-slate-400 hover:text-slate-600 p-1">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <!-- Lista de Eventos -->
+      <div class="max-h-56 overflow-y-auto border border-slate-200 rounded-xl">
+        <table class="min-w-full divide-y divide-slate-200 text-left text-xs">
+          <thead class="bg-slate-50">
+            <tr>
+              <th class="px-3 py-2.5 font-semibold text-slate-600">Nombre del Evento</th>
+              <th class="px-3 py-2.5 font-semibold text-slate-600">Sede</th>
+              <th class="px-3 py-2.5 font-semibold text-slate-600">Invitados</th>
+              <th class="px-3 py-2.5 font-semibold text-slate-600 text-right">Acción</th>
+            </tr>
+          </thead>
+          <tbody id="events-table-body" class="divide-y divide-slate-100 bg-white">
+            <tr><td colspan="4" class="px-3 py-6 text-center text-slate-400">Cargando eventos...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Formulario para Crear Nuevo Evento -->
+      <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
+        <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Crear Nuevo Evento</h4>
+        <form onsubmit="submitCreateEvent(event)" class="space-y-3">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-600 uppercase tracking-wider mb-1">Nombre *</label>
+              <input type="text" id="new-event-name" required placeholder="Ej. Congreso Anual 2026" class="w-full px-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-600 uppercase tracking-wider mb-1">Sede / Ubicación</label>
+              <input type="text" id="new-event-loc" placeholder="Ej. Auditorio Principal" class="w-full px-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+            </div>
+          </div>
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-600 uppercase tracking-wider mb-1">Enlace OneDrive/SharePoint (Opcional)</label>
+            <input type="url" id="new-event-onedrive" placeholder="https://dacer-my.sharepoint.com/..." class="w-full px-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+          </div>
+          <div class="flex items-center justify-between pt-1">
+            <label class="flex items-center gap-2 text-xs text-slate-600 cursor-pointer">
+              <input type="checkbox" id="new-event-active" checked class="rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+              <span>Activar de inmediato para acreditación</span>
+            </label>
+            <button type="submit" class="px-3.5 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-xs transition-colors">
+              Guardar Evento
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <div class="flex justify-end pt-2">
+        <button type="button" onclick="closeEventsModal()" class="px-4 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors">Cerrar</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: SUBIR INVITADOS (EXCEL, CSV, ONEDRIVE, MANUAL)                     -->
+  <!-- ========================================================================= -->
+  <div class="modal-backdrop" id="import-modal">
+    <div class="bg-white border border-slate-200 rounded-2xl shadow-xl w-full max-w-lg p-6 space-y-4">
+      
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div>
+          <h3 class="text-base font-bold text-slate-900">Subir Invitados al Evento</h3>
+          <p class="text-xs text-slate-500">Extracción y carga directa a MySQL (Cero archivos en disco)</p>
+        </div>
+        <button type="button" onclick="closeImportModal()" class="text-slate-400 hover:text-slate-600 p-1">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <!-- Segmented Tabs de Métodos de Importación -->
+      <div class="bg-slate-100 p-1 rounded-lg flex gap-1 border border-slate-200/60">
+        <button type="button" id="tab-excel-btn" onclick="switchImportTab('excel')" class="flex-1 py-1.5 text-xs font-semibold rounded-md bg-white text-slate-900 shadow-xs">Excel (.xlsx)</button>
+        <button type="button" id="tab-csv-btn" onclick="switchImportTab('csv')" class="flex-1 py-1.5 text-xs font-medium rounded-md text-slate-600 hover:text-slate-900">CSV</button>
+        <button type="button" id="tab-onedrive-btn" onclick="switchImportTab('onedrive')" class="flex-1 py-1.5 text-xs font-medium rounded-md text-slate-600 hover:text-slate-900">OneDrive</button>
+        <button type="button" id="tab-manual-btn" onclick="switchImportTab('manual')" class="flex-1 py-1.5 text-xs font-medium rounded-md text-slate-600 hover:text-slate-900">Manual</button>
+      </div>
+
+      <!-- Tab Excel -->
+      <div id="import-tab-excel" class="space-y-3">
+        <div class="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center bg-slate-50">
+          <svg class="w-8 h-8 text-emerald-600 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+          </svg>
+          <p class="text-xs text-slate-700 font-medium">Selecciona un archivo Excel (.xlsx)</p>
+          <p class="text-[11px] text-slate-400 mt-1">Columnas esperadas: ID / Código, Nombres, Empresa, Cargo</p>
+          <input type="file" id="import-excel-file" accept=".xlsx" class="mt-3 block w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+        </div>
+        <div class="flex justify-end">
+          <button type="button" onclick="uploadExcelFile()" class="px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-xs transition-colors">Importar Archivo Excel</button>
+        </div>
+      </div>
+
+      <!-- Tab CSV -->
+      <div id="import-tab-csv" style="display:none;" class="space-y-3">
+        <div class="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center bg-slate-50">
+          <svg class="w-8 h-8 text-blue-600 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+          </svg>
+          <p class="text-xs text-slate-700 font-medium">Selecciona un archivo delimitado (.csv)</p>
+          <input type="file" id="import-csv-file" accept=".csv" class="mt-3 block w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+        </div>
+        <div class="flex justify-end">
+          <button type="button" onclick="uploadCsvFile()" class="px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-xs transition-colors">Importar Archivo CSV</button>
+        </div>
+      </div>
+
+      <!-- Tab OneDrive -->
+      <div id="import-tab-onedrive" style="display:none;" class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Enlace Compartido de SharePoint / OneDrive</label>
+          <input type="url" id="import-onedrive-url" placeholder="https://dacer-my.sharepoint.com/:x:/g/personal/..." class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+        </div>
+        <div class="flex justify-end">
+          <button type="button" onclick="submitOneDriveSync()" class="px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-xs transition-colors">Sincronizar desde OneDrive</button>
+        </div>
+      </div>
+
+      <!-- Tab Manual -->
+      <div id="import-tab-manual" style="display:none;" class="space-y-3">
+        <form id="import-manual-form" onsubmit="submitManualSingleGuest(event)" class="space-y-3">
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-600 uppercase tracking-wider mb-1">Código / ID (Opcional)</label>
+              <input type="text" id="manual-guest-code" placeholder="Auto si vacío" class="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-900">
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-600 uppercase tracking-wider mb-1">Categoría</label>
+              <select id="manual-guest-cat" class="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-900">
+                <option value="GENERAL">General</option>
+                <option value="VIP">VIP</option>
+                <option value="PONENTE">Ponente</option>
+                <option value="PRENSA">Prensa</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-600 uppercase tracking-wider mb-1">Nombres y Apellidos *</label>
+            <input type="text" id="manual-guest-name" required placeholder="Ej. Juan Pérez Ramos" class="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-900">
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-600 uppercase tracking-wider mb-1">Empresa</label>
+              <input type="text" id="manual-guest-company" placeholder="Ej. DACER Tech" class="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-900">
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-600 uppercase tracking-wider mb-1">Cargo</label>
+              <input type="text" id="manual-guest-pos" placeholder="Ej. Gerente de TI" class="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-900">
+            </div>
+          </div>
+          <div class="flex justify-end pt-2">
+            <button type="submit" class="px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-xs transition-colors">Guardar Invitado</button>
+          </div>
+        </form>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: GESTIÓN DE USUARIOS Y ROLES (RBAC)                                 -->
+  <!-- ========================================================================= -->
+  <div class="modal-backdrop" id="users-modal">
+    <div class="bg-white border border-slate-200 rounded-2xl shadow-xl w-full max-w-xl p-6 space-y-4">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div>
+          <h3 class="text-base font-bold text-slate-900">Usuarios y Operadores</h3>
+          <p class="text-xs text-slate-500">Control de acceso basado en roles (RBAC)</p>
+        </div>
+        <button type="button" onclick="toggleNewUserForm()" class="px-3 py-1.5 text-xs font-semibold text-white bg-slate-800 hover:bg-slate-900 rounded-lg transition-colors">
+          + Nuevo Usuario
+        </button>
+      </div>
+
+      <!-- Formulario para Crear Usuario (Oculto por defecto) -->
+      <div id="new-user-form-container" style="display:none;" class="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
+        <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Crear Cuenta de Operador</h4>
+        <form id="create-user-form" onsubmit="submitCreateUser(event)" class="space-y-3">
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-600 uppercase tracking-wider mb-1">Usuario *</label>
+              <input type="text" id="new-user-name" required placeholder="Ej. operador1" class="w-full px-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg text-slate-900">
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-600 uppercase tracking-wider mb-1">Contraseña *</label>
+              <input type="password" id="new-user-pass" required minlength="6" placeholder="Mínimo 6 caracteres" class="w-full px-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg text-slate-900">
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-600 uppercase tracking-wider mb-1">Rol</label>
+              <select id="new-user-role" class="w-full px-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg text-slate-900">
+                <option value="OPERATOR">Operador (Acreditación)</option>
+                <option value="ADMIN">Administrador (Gestión)</option>
+                <option value="SUPERADMIN">SuperAdmin (Total)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-600 uppercase tracking-wider mb-1">Correo (Opcional)</label>
+              <input type="email" id="new-user-email" placeholder="operador@dacer.com" class="w-full px-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg text-slate-900">
+            </div>
+          </div>
+          <div class="flex justify-end gap-2 pt-1">
+            <button type="button" onclick="toggleNewUserForm()" class="px-3 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-lg">Cancelar</button>
+            <button type="submit" class="px-3.5 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors">Guardar</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Lista de Usuarios -->
+      <div class="max-h-56 overflow-y-auto border border-slate-200 rounded-xl">
+        <table class="min-w-full divide-y divide-slate-200 text-left text-xs">
+          <thead class="bg-slate-50">
+            <tr>
+              <th class="px-3 py-2.5 font-semibold text-slate-600">Usuario</th>
+              <th class="px-3 py-2.5 font-semibold text-slate-600">Rol</th>
+              <th class="px-3 py-2.5 font-semibold text-slate-600">Último Acceso</th>
+              <th class="px-3 py-2.5 font-semibold text-slate-600 text-right">Acción</th>
+            </tr>
+          </thead>
+          <tbody id="users-table-body" class="divide-y divide-slate-100 bg-white">
+            <tr><td colspan="4" class="px-3 py-6 text-center text-slate-400">Cargando usuarios...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="flex justify-end pt-2">
+        <button type="button" onclick="closeUsersModal()" class="px-4 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors">Cerrar</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: AUDITORÍA Y ANALÍTICA                                              -->
+  <!-- ========================================================================= -->
+  <div class="modal-backdrop" id="audit-modal">
+    <div class="bg-white border border-slate-200 rounded-2xl shadow-xl w-full max-w-2xl p-6 space-y-4">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div>
+          <h3 class="text-base font-bold text-slate-900">Analítica & Registro de Auditoría</h3>
+          <p class="text-xs text-slate-500">Métricas de asistencia y registro forense en MySQL</p>
+        </div>
+        <button type="button" onclick="closeAuditModal()" class="text-slate-400 hover:text-slate-600 p-1">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <!-- Métricas Resumidas -->
+      <div class="grid grid-cols-3 gap-3">
+        <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-center">
+          <div class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Total Invitados</div>
+          <div id="analytics-total-guests" class="text-xl font-bold text-slate-900 mt-0.5">0</div>
+        </div>
+        <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-center">
+          <div class="text-[10px] font-semibold text-emerald-700 uppercase tracking-wider">Acreditados</div>
+          <div id="analytics-checked-in" class="text-xl font-bold text-emerald-600 mt-0.5">0</div>
+        </div>
+        <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-center">
+          <div class="text-[10px] font-semibold text-blue-700 uppercase tracking-wider">Asistencia</div>
+          <div id="analytics-attendance-pct" class="text-xl font-bold text-blue-600 mt-0.5">0%</div>
+        </div>
+      </div>
+
+      <!-- Gráfico de Asistencias por Hora -->
+      <div>
+        <h4 class="text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">Ingresos por Intervalo Horario</h4>
+        <div id="analytics-hourly-chart" class="p-3 bg-slate-50 border border-slate-200 rounded-xl min-h-[90px] flex items-end gap-2 overflow-x-auto text-xs text-slate-400">
+          Sin registros de ingresos hoy.
+        </div>
+      </div>
+
+      <!-- Registro de Auditoría (Logs) -->
+      <div>
+        <h4 class="text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">Últimos Eventos de Auditoría</h4>
+        <div class="max-h-44 overflow-y-auto border border-slate-200 rounded-xl">
+          <table class="min-w-full divide-y divide-slate-200 text-left text-xs">
+            <thead class="bg-slate-50">
+              <tr>
+                <th class="px-3 py-2 font-semibold text-slate-600">Fecha / Hora</th>
+                <th class="px-3 py-2 font-semibold text-slate-600">Acción</th>
+                <th class="px-3 py-2 font-semibold text-slate-600">Detalles</th>
+                <th class="px-3 py-2 font-semibold text-slate-600">IP</th>
+              </tr>
+            </thead>
+            <tbody id="audit-logs-table-body" class="divide-y divide-slate-100 bg-white">
+              <tr><td colspan="4" class="px-3 py-4 text-center text-slate-400">Cargando registros...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="flex justify-end pt-2">
+        <button type="button" onclick="closeAuditModal()" class="px-4 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors">Cerrar</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- TOAST NOTIFICACIÓN                                                        -->
+  <!-- ========================================================================= -->
+  <div id="toast" class="bg-slate-900 text-white text-xs font-medium px-4 py-3 rounded-xl shadow-xl flex items-center gap-2.5">
+    <span id="toast-icon">
+      <svg class="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+      </svg>
+    </span>
+    <span id="toast-msg">Notificación del sistema</span>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- JAVASCRIPT: LÓGICA COMPLETA Y ROBUSTA                                      -->
+  <!-- ========================================================================= -->
+  <script>
+    let allGuests = [];
+    let kioskSettings = {};
+    let faceCurrentGuestId = null;
+    let faceWebcamStream = null;
+    let toastTimeout = null;
+
+    // Toast ergonómico
+    function toast(msg, type = 'info') {
+      showToast(msg, type);
     }
-  } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="5" style="padding:20px; text-align:center; color:var(--danger);">Error: ${escapeHtml(err.message)}</td></tr>`;
-  }
-}
 
-async function submitCreateEvent(e) {
-  e.preventDefault();
-  const name = document.getElementById('new-event-name').value.trim();
-  const location = document.getElementById('new-event-location').value.trim();
-  const onedrive_url = document.getElementById('new-event-onedrive').value.trim();
-  const description = document.getElementById('new-event-desc').value.trim();
-  const set_active = document.getElementById('new-event-set-active').checked;
+    function showToast(msg, type = 'info') {
+      const el = document.getElementById('toast');
+      const msgEl = document.getElementById('toast-msg');
+      const iconEl = document.getElementById('toast-icon');
+      if (!el || !msgEl) return;
 
-  if (!name) {
-    showToast('Ingresa el nombre del evento', 'warn');
-    return;
-  }
+      msgEl.textContent = msg;
 
-  try {
-    const res = await fetch('/admin/api/events', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, location, onedrive_url, description, set_active })
-    });
-    const data = await res.json();
-    if (res.ok && data.status === 'ok') {
-      showToast(data.message || 'Evento creado exitosamente', 'success');
-      toggleNewEventForm();
-      loadEventsList();
-      if (set_active && data.event) {
-        updateActiveEventUI(data.event);
-        await loadGuests();
-        await loadKioskSettings();
+      if (type === 'error') {
+        iconEl.innerHTML = `<svg class="w-4 h-4 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>`;
+      } else if (type === 'warn') {
+        iconEl.innerHTML = `<svg class="w-4 h-4 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>`;
+      } else {
+        iconEl.innerHTML = `<svg class="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>`;
       }
-    } else {
-      showToast(data.error || 'Error al crear evento', 'error');
-    }
-  } catch (err) {
-    showToast('Error de red: ' + err.message, 'error');
-  }
-}
 
-async function activateEvent(eventId) {
-  try {
-    const res = await fetch(`/admin/api/events/${eventId}/activate`, { method: 'POST' });
-    const data = await res.json();
-    if (res.ok && data.status === 'ok') {
-      showToast(data.message || 'Evento activado', 'success');
-      loadEventsList();
-      if (data.event) {
-        updateActiveEventUI(data.event);
-        await loadGuests();
-        await loadKioskSettings();
+      el.classList.add('show');
+      clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        el.classList.remove('show');
+      }, 3500);
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    // ── Kiosk Settings ────────────────────────────────────────────────────────
+    async function loadKioskSettings() {
+      try {
+        const res = await fetch('/api/kiosk-settings');
+        const data = await res.json();
+        if (data.status === 'ok') {
+          kioskSettings = data.settings;
+          renderKioskSettingsUI();
+        }
+      } catch (err) {
+        console.warn('Error cargando kiosk-settings:', err);
       }
-    } else {
-      showToast(data.error || 'Error al activar evento', 'error');
     }
-  } catch (err) {
-    showToast('Error de conexión: ' + err.message, 'error');
-  }
-}
 
-async function deleteEvent(eventId, name) {
-  if (!confirm(`¿Eliminar el evento "${name}"? Se borrarán sus listas y asistencias en MySQL.`)) return;
-  try {
-    const res = await fetch(`/admin/api/events/${eventId}`, { method: 'DELETE' });
-    const data = await res.json();
-    if (res.ok && data.status === 'ok') {
-      showToast(data.message || 'Evento eliminado', 'info');
-      loadEventsList();
-      await loadGuests();
-    } else {
-      showToast(data.error || 'Error al eliminar evento', 'error');
+    function renderKioskSettingsUI() {
+      const m = kioskSettings.method || 'both';
+      const methBoth = document.getElementById('admin-meth-both');
+      const methFacial = document.getElementById('admin-meth-facial');
+      const methQr = document.getElementById('admin-meth-qr');
+      if (methBoth) methBoth.classList.toggle('active', m === 'both');
+      if (methFacial) methFacial.classList.toggle('active', m === 'facial');
+      if (methQr) methQr.classList.toggle('active', m === 'qr');
+
+      const descEl = document.getElementById('admin-method-desc');
+      if (descEl) {
+        if (m === 'both') descEl.textContent = 'Permite escanear código QR y reconocer rostros en simultáneo.';
+        else if (m === 'facial') descEl.textContent = 'Modo exclusivo: solo reconocimiento facial (cámara activa).';
+        else if (m === 'qr') descEl.textContent = 'Modo exclusivo: solo escaneo de código QR.';
+      }
+
+      const mode = kioskSettings.mode || 'manual';
+      const modeMan = document.getElementById('admin-mode-manual');
+      const modeAuto = document.getElementById('admin-mode-auto');
+      if (modeMan) modeMan.classList.toggle('active', mode === 'manual');
+      if (modeAuto) modeAuto.classList.toggle('active', mode === 'auto');
+
+      const th = kioskSettings.face_threshold !== undefined ? kioskSettings.face_threshold : 0.70;
+      const slider = document.getElementById('admin-threshold-slider');
+      if (slider) slider.value = th;
+      const badge = document.getElementById('threshold-val-badge');
+      if (badge) badge.textContent = Number(th).toFixed(2);
     }
-  } catch (err) {
-    showToast('Error de conexión: ' + err.message, 'error');
-  }
-}
 
-function updateActiveEventUI(eventObj) {
-  const nameEl = document.getElementById('display-active-event-name');
-  if (nameEl) nameEl.textContent = eventObj.name;
-  const detEl = document.getElementById('display-active-event-details');
-  if (detEl) {
-    detEl.innerHTML = `<span>📍 ${escapeHtml(eventObj.location || 'Sede central')}</span>` +
-      (eventObj.onedrive_url ? ' <span style="margin-left:8px; color:#0078d4;">☁️ Conectado a OneDrive</span>' : '');
-  }
-  const modalName = document.getElementById('modal-import-event-name');
-  if (modalName) modalName.textContent = eventObj.name;
-  const odInput = document.getElementById('import-onedrive-url');
-  if (odInput) odInput.value = eventObj.onedrive_url || '';
-}
-
-/* ── Modal Unificado de Importación y Métodos de Subida ── */
-function openImportModal() {
-  const modal = document.getElementById('import-modal');
-  if (modal) modal.classList.add('open');
-  switchImportTab('file');
-}
-
-function closeImportModal() {
-  const modal = document.getElementById('import-modal');
-  if (modal) modal.classList.remove('open');
-  const input = document.getElementById('import-file-input');
-  if (input) input.value = '';
-}
-
-function switchImportTab(tab) {
-  const secFile = document.getElementById('import-sec-file');
-  const secOD = document.getElementById('import-sec-onedrive');
-  const secManual = document.getElementById('import-sec-manual');
-  const btnFile = document.getElementById('tab-import-file-btn');
-  const btnOD = document.getElementById('tab-import-onedrive-btn');
-  const btnManual = document.getElementById('tab-import-manual-btn');
-
-  if (secFile) secFile.style.display = tab === 'file' ? 'block' : 'none';
-  if (secOD) secOD.style.display = tab === 'onedrive' ? 'block' : 'none';
-  if (secManual) secManual.style.display = tab === 'manual' ? 'block' : 'none';
-
-  if (btnFile) btnFile.style.background = tab === 'file' ? 'var(--surface2)' : 'transparent';
-  if (btnOD) btnOD.style.background = tab === 'onedrive' ? 'var(--surface2)' : 'transparent';
-  if (btnManual) btnManual.style.background = tab === 'manual' ? 'var(--surface2)' : 'transparent';
-}
-
-async function uploadImportFile(e) {
-  e.preventDefault();
-  const fileInput = document.getElementById('import-file-input');
-  const submitBtn = document.getElementById('btn-submit-import');
-  if (!fileInput || !fileInput.files.length) {
-    showToast('Selecciona un archivo válido (.xlsx o .csv)', 'warn');
-    return;
-  }
-  const file = fileInput.files[0];
-  const formData = new FormData();
-  formData.append('file', file);
-
-  const prevText = submitBtn.textContent;
-  submitBtn.disabled = true;
-  submitBtn.textContent = 'Procesando en MySQL...';
-
-  try {
-    const res = await fetch('/admin/api/import/file', {
-      method: 'POST',
-      body: formData
-    });
-    const data = await res.json();
-    if (res.ok && data.status === 'ok') {
-      showToast(data.message || 'Archivo importado con éxito', 'success');
-      closeImportModal();
-      await loadGuests();
-    } else {
-      showToast(data.error || 'Error al procesar el archivo', 'error');
+    async function updateKioskSetting(key, val) {
+      kioskSettings[key] = val;
+      renderKioskSettingsUI();
+      try {
+        const res = await fetch('/api/kiosk-settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(kioskSettings),
+        });
+        const data = await res.json();
+        if (data.status === 'ok') {
+          showToast('Configuración actualizada correctamente', 'success');
+        } else {
+          showToast('Error guardando configuración', 'error');
+        }
+      } catch (err) {
+        showToast('Error de conexión: ' + err.message, 'error');
+      }
     }
-  } catch (err) {
-    showToast('Error de conexión al importar: ' + err.message, 'error');
-  } finally {
-    submitBtn.disabled = false;
-    submitBtn.textContent = prevText;
-  }
-}
 
-async function submitOneDriveSync(e) {
-  e.preventDefault();
-  const urlInput = document.getElementById('import-onedrive-url');
-  const submitBtn = document.getElementById('btn-submit-onedrive');
-  const url = urlInput.value.trim();
-  if (!url) {
-    showToast('Ingresa un enlace de OneDrive o SharePoint', 'warn');
-    return;
-  }
+    // ── Impresora Brother QL-800 ──────────────────────────────────────────────
+    async function loadPrinterStatus() {
+      try {
+        const res = await fetch('/api/printer/status');
+        const data = await res.json();
+        const dot = document.getElementById('printer-dot');
+        const info = document.getElementById('printer-info');
+        const purgeBtn = document.getElementById('btn-purge-queue');
+        const queueCount = document.getElementById('queue-jobs-count');
 
-  const prevText = submitBtn.textContent;
-  submitBtn.disabled = true;
-  submitBtn.textContent = 'Descargando desde OneDrive...';
+        if (purgeBtn && queueCount) {
+          if (data.jobs_in_queue > 0) {
+            purgeBtn.style.display = 'inline-flex';
+            queueCount.textContent = data.jobs_in_queue;
+          } else {
+            purgeBtn.style.display = 'none';
+          }
+        }
 
-  try {
-    const res = await fetch('/admin/api/import/onedrive', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url })
-    });
-    const data = await res.json();
-    if (res.ok && data.status === 'ok') {
-      showToast(data.message || 'Lista sincronizada con éxito desde OneDrive', 'success');
-      closeImportModal();
-      await loadGuests();
-    } else {
-      showToast(data.error || 'Error al sincronizar con OneDrive', 'error');
+        if (data.online && data.is_ready) {
+          if (dot) dot.className = 'printer-dot ready';
+          if (info) info.innerHTML = `<span class="text-emerald-700 font-semibold">${escapeHtml(data.name)}</span> conectada y lista (Online • Rollo ${escapeHtml(data.label || 'DK-1208')} 38x90mm)`;
+        } else if (data.installed) {
+          if (dot) dot.className = 'printer-dot';
+          if (info) info.innerHTML = `<span class="text-rose-600 font-semibold">${escapeHtml(data.name)} desconectada o apagada:</span> ${escapeHtml(data.status_text)} <span class="text-slate-400 text-xs">(${escapeHtml(data.details || 'Verifica el cable USB y encendido')})</span>`;
+        } else {
+          if (dot) dot.className = 'printer-dot';
+          if (info) info.innerHTML = `<span class="text-rose-600 font-semibold">${escapeHtml(data.name)} no detectada</span> (${escapeHtml(data.status_text)})`;
+        }
+      } catch (err) {
+        console.error('Error al comprobar impresora:', err);
+      }
     }
-  } catch (err) {
-    showToast('Error al conectar con OneDrive: ' + err.message, 'error');
-  } finally {
-    submitBtn.disabled = false;
-    submitBtn.textContent = prevText;
-  }
-}
 
-async function submitManualSingleGuest(e) {
-  e.preventDefault();
-  const guest_code = document.getElementById('manual-guest-code').value.trim();
-  const name = document.getElementById('manual-guest-name').value.trim();
-  const company = document.getElementById('manual-guest-company').value.trim();
-  const position = document.getElementById('manual-guest-pos').value.trim();
-  const email = document.getElementById('manual-guest-email').value.trim();
-  const phone = document.getElementById('manual-guest-phone').value.trim();
-  const category = document.getElementById('manual-guest-cat').value;
-
-  if (!name) {
-    showToast('El nombre es obligatorio', 'warn');
-    return;
-  }
-
-  try {
-    const res = await fetch('/api/guests', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: guest_code, name, company, position, email, phone, category })
-    });
-    const data = await res.json();
-    if (res.ok && data.status === 'ok') {
-      showToast(`Invitado ${name} guardado en MySQL`, 'success');
-      closeImportModal();
-      await loadGuests();
-    } else {
-      showToast(data.error || 'Error al registrar invitado', 'error');
+    async function manualCheckPrinterStatus() {
+      showToast('Comprobando conexión física de la impresora...', 'warn');
+      await loadPrinterStatus();
+      try {
+        const res = await fetch('/api/printer/status');
+        const data = await res.json();
+        if (data.online && data.is_ready) {
+          showToast(`Impresora ${data.name} conectada y lista (Online)`, 'success');
+        } else {
+          showToast(`Impresora no disponible: ${data.status_text}`, 'error');
+        }
+      } catch (err) {
+        showToast('Error consultando impresora: ' + err.message, 'error');
+      }
     }
-  } catch (err) {
-    showToast('Error de conexión: ' + err.message, 'error');
-  }
-}
 
-/* ── Modal de Gestión de Usuarios y Operadores ── */
-function openUsersModal() {
-  const modal = document.getElementById('users-modal');
-  if (modal) modal.classList.add('open');
-  loadUsersList();
-}
+    async function purgePrinterQueue() {
+      if (!confirm('¿Deseas cancelar y limpiar los trabajos pendientes de la cola de impresión de Windows?')) return;
+      try {
+        const res = await fetch('/api/printer/purge-jobs', { method: 'POST' });
+        const data = await res.json();
+        if (data.status === 'ok') {
+          showToast('Cola de impresión limpiada exitosamente', 'success');
+          await loadPrinterStatus();
+        } else {
+          showToast(`Error: ${data.error || 'No se pudo limpiar la cola'}`, 'error');
+        }
+      } catch (err) {
+        showToast('Error al limpiar cola: ' + err.message, 'error');
+      }
+    }
 
-function closeUsersModal() {
-  const modal = document.getElementById('users-modal');
-  if (modal) modal.classList.remove('open');
-  const formBox = document.getElementById('new-user-form-container');
-  if (formBox) formBox.style.display = 'none';
-}
+    // ── Carga y Renderizado de la Tabla de Asistentes ─────────────────────────
+    async function loadGuests() {
+      try {
+        const res = await fetch('/api/guests');
+        allGuests = await res.json();
 
-function toggleNewUserForm() {
-  const formBox = document.getElementById('new-user-form-container');
-  if (!formBox) return;
-  const isHidden = formBox.style.display === 'none' || formBox.style.display === '';
-  formBox.style.display = isHidden ? 'block' : 'none';
-  if (isHidden) {
-    document.getElementById('new-user-name').value = '';
-    document.getElementById('new-user-pass').value = '';
-    document.getElementById('new-user-email').value = '';
-  }
-}
+        const total = allGuests.length;
+        const checked = allGuests.filter(g => g.checked_in).length;
+        const pending = total - checked;
+        const pct = total > 0 ? Math.round((checked / total) * 100) : 0;
 
-async function loadUsersList() {
-  const tbody = document.getElementById('users-table-body');
-  if (!tbody) return;
-  tbody.innerHTML = '<tr><td colspan="4" style="padding:16px; text-align:center; color:var(--muted);">Cargando usuarios...</td></tr>';
-  try {
-    const res = await fetch('/admin/api/users');
-    const data = await res.json();
-    if (data.status === 'ok' && data.users) {
-      if (data.users.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" style="padding:16px; text-align:center; color:var(--muted);">No hay usuarios registrados.</td></tr>';
+        document.getElementById('stat-total').textContent = total;
+        document.getElementById('stat-checked').textContent = checked;
+        document.getElementById('stat-pending').textContent = pending;
+        
+        const pctEl = document.getElementById('stat-checked-pct');
+        if (pctEl) pctEl.textContent = pct + '%';
+        
+        const progEl = document.getElementById('disp-progress');
+        if (progEl) progEl.style.width = pct + '%';
+
+        filterGuests();
+      } catch (err) {
+        console.error('Error cargando invitados:', err);
+      }
+    }
+
+    function filterGuests() {
+      const q = (document.getElementById('search-input')?.value || '').toLowerCase().trim();
+      const statusF = document.getElementById('filter-status')?.value || 'all';
+      const faceF = document.getElementById('filter-face')?.value || 'all';
+
+      const filtered = allGuests.filter(g => {
+        const matchQ = !q ||
+          (g.id && g.id.toLowerCase().includes(q)) ||
+          (g.name && g.name.toLowerCase().includes(q)) ||
+          (g.company && g.company.toLowerCase().includes(q)) ||
+          (g.position && g.position.toLowerCase().includes(q));
+
+        let matchStatus = true;
+        if (statusF === 'checked') matchStatus = g.checked_in;
+        else if (statusF === 'pending') matchStatus = !g.checked_in;
+
+        let matchFace = true;
+        if (faceF === 'enrolled') matchFace = g.face_enrolled;
+        else if (faceF === 'none') matchFace = !g.face_enrolled;
+
+        return matchQ && matchStatus && matchFace;
+      });
+
+      const badge = document.getElementById('guests-count-badge');
+      if (badge) badge.textContent = `${filtered.length} de ${allGuests.length} asistentes`;
+
+      renderGuestsTable(filtered);
+    }
+
+    function renderGuestsTable(guests) {
+      const tbody = document.getElementById('guests-tbody');
+      if (!tbody) return;
+
+      if (!guests.length) {
+        if (!allGuests.length) {
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="7" class="px-4 py-16 text-center">
+                <div class="w-12 h-12 rounded-full bg-slate-100 text-slate-400 mx-auto flex items-center justify-center mb-3">
+                  <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+                  </svg>
+                </div>
+                <h4 class="text-sm font-semibold text-slate-800">No hay asistentes registrados en este evento</h4>
+                <p class="text-xs text-slate-500 max-w-sm mx-auto mt-1 mb-4">Puedes importar la lista desde un archivo Excel, CSV, enlace de OneDrive o agregar asistentes manualmente.</p>
+                <button type="button" onclick="openImportModal()" class="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-xs transition-colors">
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                  </svg>
+                  <span>Subir Invitados</span>
+                </button>
+              </td>
+            </tr>`;
+        } else {
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="7" class="px-4 py-12 text-center text-slate-500">
+                <p class="font-medium text-slate-700">No se encontraron resultados para la búsqueda</p>
+                <p class="text-xs text-slate-400 mt-0.5">Intenta modificar los filtros o el texto ingresado.</p>
+              </td>
+            </tr>`;
+        }
         return;
       }
-      tbody.innerHTML = data.users.map(u => `
-        <tr style="border-bottom:1px solid var(--border);">
-          <td style="padding:10px 12px; font-weight:600;">
-            ${escapeHtml(u.username)}
-            ${u.email ? `<div style="font-size:0.75rem; color:var(--muted); font-weight:normal;">${escapeHtml(u.email)}</div>` : ''}
-          </td>
-          <td style="padding:10px 12px;">
-            <span style="display:inline-block; padding:2px 8px; border-radius:12px; font-size:0.75rem; font-weight:700;
-              background:${u.role === 'SUPERADMIN' ? 'rgba(220,38,38,0.15)' : u.role === 'ADMIN' ? 'rgba(37,99,235,0.15)' : 'rgba(100,116,139,0.15)'};
-              color:${u.role === 'SUPERADMIN' ? '#dc2626' : u.role === 'ADMIN' ? '#2563eb' : 'var(--text)'};">
-              ${escapeHtml(u.role)}
+
+      tbody.innerHTML = '';
+      guests.forEach(g => {
+        const timeStr = g.checked_in_at
+          ? new Date(g.checked_in_at).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })
+          : '—';
+
+        const tr = document.createElement('tr');
+        tr.id = `row-${g.id}`;
+        tr.className = 'hover:bg-slate-50/80 transition-colors border-b border-slate-100';
+
+        tr.innerHTML = `
+          <!-- ID -->
+          <td class="px-4 py-3.5 whitespace-nowrap">
+            <span class="font-mono text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+              ${escapeHtml(g.id)}
             </span>
           </td>
-          <td style="padding:10px 12px; font-size:0.8rem; color:var(--muted);">
-            ${u.last_login ? escapeHtml(u.last_login) : 'Nunca'}
+
+          <!-- Nombres / Empresa -->
+          <td class="px-4 py-3.5">
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-xs shrink-0 border border-slate-200 uppercase">
+                ${g.name ? escapeHtml(g.name[0]) : 'I'}
+              </div>
+              <div class="min-w-0">
+                <div class="font-semibold text-slate-900 truncate">${escapeHtml(g.name)}</div>
+                <div class="text-xs text-slate-500 truncate">${escapeHtml(g.company || '—')}</div>
+              </div>
+            </div>
           </td>
-          <td style="padding:10px 12px; text-align:right;">
-            <button class="btn danger" style="padding:4px 8px; font-size:0.75rem;" onclick="deleteUser(${u.id}, '${escapeHtml(u.username)}')">Eliminar</button>
+
+          <!-- Cargo -->
+          <td class="px-4 py-3.5 text-xs text-slate-600 truncate max-w-[170px]">
+            ${escapeHtml(g.position || '—')}
           </td>
-        </tr>
-      `).join('');
-    } else {
-      tbody.innerHTML = `<tr><td colspan="4" style="padding:16px; text-align:center; color:var(--danger);">${data.error || 'Error al cargar usuarios'}</td></tr>`;
+
+          <!-- Estado Toggle (Clickable Pill) -->
+          <td class="px-4 py-3.5 whitespace-nowrap">
+            <button type="button" onclick="toggleGuestStatus('${g.id}')" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-colors ${
+              g.checked_in
+                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
+                : 'bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200'
+            }">
+              <span class="w-1.5 h-1.5 rounded-full ${g.checked_in ? 'bg-emerald-500' : 'bg-slate-400'}"></span>
+              <span>${g.checked_in ? 'Acreditado' : 'Pendiente'}</span>
+            </button>
+          </td>
+
+          <!-- Hora -->
+          <td class="px-4 py-3.5 whitespace-nowrap text-xs font-medium text-slate-600">
+            ${timeStr}
+          </td>
+
+          <!-- Biometría Facial -->
+          <td class="px-4 py-3.5 whitespace-nowrap text-center">
+            <button type="button" onclick="openFaceModal('${g.id}', '${escapeHtml(g.name).replace(/'/g, "\\'")}')" class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-lg transition-colors ${
+              g.face_enrolled
+                ? 'bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100'
+                : 'bg-slate-50 text-slate-500 border border-slate-200 hover:bg-slate-100'
+            }" title="Administrar fotos faciales">
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+              </svg>
+              <span>${g.face_count > 0 ? `${g.face_count}/4 fotos` : '+ Enrolar'}</span>
+            </button>
+          </td>
+
+          <!-- Acciones -->
+          <td class="px-4 py-3.5 whitespace-nowrap text-right text-xs">
+            <div class="inline-flex items-center gap-1">
+              <button type="button" onclick="manualPrintGuest('${g.id}')" class="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Imprimir Etiqueta Brother QL-800">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4H7v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+                </svg>
+              </button>
+
+              <button type="button" onclick="openEditGuestModal('${g.id}')" class="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors" title="Editar Información">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+                </svg>
+              </button>
+
+              <button type="button" onclick="deleteGuest('${g.id}', '${escapeHtml(g.name).replace(/'/g, "\\'")}')" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors" title="Eliminar Invitado">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                </svg>
+              </button>
+            </div>
+          </td>
+        `;
+
+        tbody.appendChild(tr);
+      });
     }
-  } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="4" style="padding:16px; text-align:center; color:var(--danger);">Error: ${escapeHtml(err.message)}</td></tr>`;
-  }
-}
 
-async function submitCreateUser(e) {
-  e.preventDefault();
-  const username = document.getElementById('new-user-name').value.trim();
-  const password = document.getElementById('new-user-pass').value.trim();
-  const role = document.getElementById('new-user-role').value;
-  const email = document.getElementById('new-user-email').value.trim();
-
-  if (!username || !password) {
-    showToast('Ingresa usuario y contraseña', 'warn');
-    return;
-  }
-
-  try {
-    const res = await fetch('/admin/api/users', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password, role, email })
-    });
-    const data = await res.json();
-    if (res.ok && data.status === 'ok') {
-      showToast(data.message || 'Usuario creado exitosamente', 'success');
-      toggleNewUserForm();
-      loadUsersList();
-    } else {
-      showToast(data.error || 'Error al crear usuario', 'error');
+    // ── Toggle Status & Manual Print ──────────────────────────────────────────
+    async function toggleGuestStatus(id) {
+      try {
+        const res = await fetch(`/api/guest/${id}/status`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        });
+        const data = await res.json();
+        if (data.status === 'ok') {
+          showToast(data.message, 'success');
+          await loadGuests();
+        } else {
+          showToast(data.error || 'Error al cambiar estado', 'error');
+        }
+      } catch (err) {
+        showToast('Error de conexión: ' + err.message, 'error');
+      }
     }
-  } catch (err) {
-    showToast('Error de conexión: ' + err.message, 'error');
-  }
-}
 
-async function deleteUser(userId, username) {
-  if (!confirm(`¿Estás seguro de eliminar al usuario "${username}"?`)) return;
-  try {
-    const res = await fetch(`/admin/api/users/${userId}`, {
-      method: 'DELETE'
-    });
-    const data = await res.json();
-    if (res.ok && data.status === 'ok') {
-      showToast(data.message || 'Usuario eliminado', 'info');
-      loadUsersList();
-    } else {
-      showToast(data.error || 'Error al eliminar usuario', 'error');
+    async function manualPrintGuest(id) {
+      try {
+        showToast(`Enviando ticket de ${id} a impresora...`, 'info');
+        const res = await fetch(`/api/print-guest/${id}`, { method: 'POST' });
+        const data = await res.json();
+        if (data.status === 'ok') {
+          showToast(`Impresión completada para ${id}`, 'success');
+          await loadPrinterStatus();
+        } else {
+          showToast(`Error al imprimir: ${data.error || 'Impresora ocupada o apagada'}`, 'error');
+        }
+      } catch (err) {
+        showToast('Error de conexión: ' + err.message, 'error');
+      }
     }
-  } catch (err) {
-    showToast('Error de conexión: ' + err.message, 'error');
-  }
-}
 
-/* ── Modal de Auditoría y Analítica ── */
-function openAuditModal() {
-  const modal = document.getElementById('audit-modal');
-  if (modal) modal.classList.add('open');
-  loadAuditLogs();
-}
+    // ── Modal Agregar / Editar Invitado ───────────────────────────────────────
+    let editMode = false;
 
-function closeAuditModal() {
-  const modal = document.getElementById('audit-modal');
-  if (modal) modal.classList.remove('open');
-}
-
-async function loadAuditLogs() {
-  const statPct = document.getElementById('audit-stat-pct');
-  const statQr = document.getElementById('audit-stat-qr');
-  const statFacial = document.getElementById('audit-stat-facial');
-  const tbody = document.getElementById('audit-table-body');
-
-  try {
-    const aRes = await fetch('/admin/api/analytics');
-    const aData = await aRes.json();
-    if (aData.status === 'ok' && aData.stats) {
-      if (statPct) statPct.textContent = (aData.stats.attendance_percentage || 0) + '%';
-      if (statQr) statQr.textContent = aData.stats.method_qr || 0;
-      if (statFacial) statFacial.textContent = aData.stats.method_facial || 0;
+    function openAddGuestModal() {
+      editMode = false;
+      document.getElementById('guest-modal-title').textContent = 'Registrar Nuevo Invitado';
+      document.getElementById('m-id').value = '';
+      document.getElementById('m-id').disabled = false;
+      document.getElementById('m-name').value = '';
+      document.getElementById('m-company').value = '';
+      document.getElementById('m-position').value = '';
+      document.getElementById('guest-modal').classList.add('open');
+      setTimeout(() => document.getElementById('m-id').focus(), 100);
     }
-  } catch (err) {
-    console.warn('Error cargando analítica:', err);
-  }
 
-  if (!tbody) return;
-  tbody.innerHTML = '<tr><td colspan="4" style="padding:16px; text-align:center; color:var(--muted);">Cargando registros...</td></tr>';
+    function openEditGuestModal(id) {
+      const g = allGuests.find(x => x.id === id);
+      if (!g) return;
 
-  try {
-    const lRes = await fetch('/admin/api/audit-logs');
-    const lData = await lRes.json();
-    if (lData.status === 'ok' && lData.logs) {
-      if (lData.logs.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" style="padding:16px; text-align:center; color:var(--muted);">No hay eventos de auditoría registrados.</td></tr>';
+      editMode = true;
+      document.getElementById('guest-modal-title').textContent = `Editar Invitado ${g.id}`;
+      document.getElementById('m-id').value = g.id;
+      document.getElementById('m-id').disabled = true;
+      document.getElementById('m-name').value = g.name || '';
+      document.getElementById('m-company').value = g.company || '';
+      document.getElementById('m-position').value = g.position || '';
+      document.getElementById('guest-modal').classList.add('open');
+      setTimeout(() => document.getElementById('m-name').focus(), 100);
+    }
+
+    function closeAddGuestModal() {
+      document.getElementById('guest-modal').classList.remove('open');
+    }
+
+    async function submitGuestForm(e) {
+      e.preventDefault();
+      const id = document.getElementById('m-id').value.trim();
+      const name = document.getElementById('m-name').value.trim();
+      const company = document.getElementById('m-company').value.trim();
+      const position = document.getElementById('m-position').value.trim();
+
+      if (!id || !name) {
+        showToast('El código y el nombre son obligatorios', 'error');
         return;
       }
-      tbody.innerHTML = lData.logs.map(log => `
-        <tr style="border-bottom:1px solid var(--border);">
-          <td style="padding:8px 10px; font-family:monospace; font-size:0.75rem; color:var(--muted); white-space:nowrap;">
-            ${escapeHtml(log.created_at || '—')}
-          </td>
-          <td style="padding:8px 10px;">
-            <span style="font-weight:700; font-size:0.75rem; color:var(--accent);">${escapeHtml(log.action || '—')}</span>
-          </td>
-          <td style="padding:8px 10px; font-size:0.78rem;">
-            ${escapeHtml(log.username || 'Sistema')}
-            ${log.ip_address ? `<div style="font-size:0.7rem; color:var(--muted);">${escapeHtml(log.ip_address)}</div>` : ''}
-          </td>
-          <td style="padding:8px 10px; font-size:0.78rem; color:var(--text);">
-            ${escapeHtml(log.details || '—')}
-          </td>
-        </tr>
-      `).join('');
-    } else {
-      tbody.innerHTML = `<tr><td colspan="4" style="padding:16px; text-align:center; color:var(--danger);">${lData.error || 'Error al obtener registros'}</td></tr>`;
+
+      try {
+        const res = await fetch('/api/guest', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, name, company, position }),
+        });
+        const data = await res.json();
+        if (data.status === 'ok') {
+          showToast(editMode ? 'Invitado actualizado exitosamente' : 'Invitado registrado exitosamente', 'success');
+          closeAddGuestModal();
+          await loadGuests();
+        } else {
+          showToast(data.error || 'Error al guardar invitado', 'error');
+        }
+      } catch (err) {
+        showToast('Error de conexión: ' + err.message, 'error');
+      }
     }
-  } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="4" style="padding:16px; text-align:center; color:var(--danger);">Error: ${escapeHtml(err.message)}</td></tr>`;
-  }
-}
 
-loadKioskSettings();
-loadPrinterStatus();
-loadGuests();
+    async function deleteGuest(id, name) {
+      if (!confirm(`¿Estás seguro de eliminar a "${name}" (${id}) de la base de datos MySQL? Esta acción no se puede deshacer.`)) return;
 
-let pollTicks = 0;
-// Sincronización en vivo cada 3.5 segundos para reflejar escaneos del kiosko y estado en tiempo real
-setInterval(async () => {
-  pollTicks++;
-  if (pollTicks % 2 === 0) {
-    loadPrinterStatus();
-  }
+      try {
+        const res = await fetch(`/api/guest/${id}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (data.status === 'ok') {
+          showToast(`Invitado ${id} eliminado`, 'success');
+          await loadGuests();
+        } else {
+          showToast(data.error || 'Error al eliminar', 'error');
+        }
+      } catch (err) {
+        showToast('Error de conexión: ' + err.message, 'error');
+      }
+    }
 
-  const guestModalOpen = document.getElementById('guest-modal').classList.contains('open');
-  const faceModalOpen  = document.getElementById('face-modal').classList.contains('open');
-  if (!guestModalOpen && !faceModalOpen) {
-    const res = await fetch('/api/guests');
-    allGuests = await res.json();
-    const total = allGuests.length;
-    const checked = allGuests.filter(g => g.checked_in).length;
-    document.getElementById('stat-total').textContent = total;
-    document.getElementById('stat-checked').textContent = checked;
-    document.getElementById('stat-pending').textContent = total - checked;
-    filterTable();
-  }
-}, 3500);
-</script>
+    async function confirmReset() {
+      if (!confirm('¿Deseas restablecer la asistencia de TODOS los invitados a PENDIENTE? Los registros de check-in serán reiniciados.')) return;
+
+      try {
+        const res = await fetch('/api/reset-all', { method: 'POST' });
+        const data = await res.json();
+        if (data.status === 'ok') {
+          showToast('Asistencias reiniciadas correctamente', 'success');
+          await loadGuests();
+        } else {
+          showToast('Error al reiniciar asistencias', 'error');
+        }
+      } catch (err) {
+        showToast('Error: ' + err.message, 'error');
+      }
+    }
+
+    async function confirmDeleteAllFaces() {
+      if (!confirm('¿Eliminar TODOS los modelos y fotos faciales de los invitados registrados?\n\nEsta acción borrará todas las imágenes biométricas del servidor. Deberás enrolar las fotos nuevamente.')) return;
+
+      try {
+        const res = await fetch('/api/faces/delete-all', { method: 'POST' });
+        const data = await res.json();
+        if (data.status === 'ok' || data.success) {
+          showToast(data.message || 'Modelos faciales eliminados de MySQL', 'success');
+          await loadGuests();
+        } else {
+          showToast(data.error || 'Error al eliminar fotos', 'error');
+        }
+      } catch (err) {
+        showToast('Error: ' + err.message, 'error');
+      }
+    }
+
+    // ── Enrolamiento Facial Biométrico ─────────────────────────────────────────
+    function openFaceModal(id, name) {
+      faceCurrentGuestId = id;
+      document.getElementById('face-modal-guest-name').textContent = name || id;
+      document.getElementById('face-modal-guest-id').textContent = id;
+      document.getElementById('face-status-msg').style.display = 'none';
+
+      switchFaceTab('webcam');
+      document.getElementById('face-modal').classList.add('open');
+      loadGuestFaces(id);
+    }
+
+    function closeFaceModal() {
+      stopFaceWebcam();
+      document.getElementById('face-modal').classList.remove('open');
+      faceCurrentGuestId = null;
+      loadGuests();
+    }
+
+    function switchFaceTab(tab) {
+      const isWebcam = tab === 'webcam';
+      const webTab = document.getElementById('face-tab-webcam');
+      const upTab = document.getElementById('face-tab-upload');
+      const webBtn = document.getElementById('tab-webcam-btn');
+      const upBtn = document.getElementById('tab-upload-btn');
+
+      if (isWebcam) {
+        webTab.style.display = 'block';
+        upTab.style.display = 'none';
+        webBtn.className = 'flex-1 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 text-slate-800 border border-slate-200';
+        upBtn.className = 'flex-1 py-1.5 text-xs font-medium rounded-lg text-slate-500 hover:text-slate-700';
+        startFaceWebcam();
+      } else {
+        webTab.style.display = 'none';
+        upTab.style.display = 'block';
+        upBtn.className = 'flex-1 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 text-slate-800 border border-slate-200';
+        webBtn.className = 'flex-1 py-1.5 text-xs font-medium rounded-lg text-slate-500 hover:text-slate-700';
+        stopFaceWebcam();
+      }
+    }
+
+    async function startFaceWebcam() {
+      const video = document.getElementById('face-webcam');
+      if (!video) return;
+
+      try {
+        stopFaceWebcam();
+        faceWebcamStream = await navigator.mediaDevices.getUserMedia({
+          video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' },
+          audio: false,
+        });
+        video.srcObject = faceWebcamStream;
+        await video.play();
+      } catch (err) {
+        console.warn('Error accediendo a cámara web:', err);
+        setFaceStatus('No se pudo acceder a la cámara web. Puedes subir una foto desde archivo.', 'error');
+      }
+    }
+
+    function stopFaceWebcam() {
+      if (faceWebcamStream) {
+        faceWebcamStream.getTracks().forEach(t => t.stop());
+        faceWebcamStream = null;
+      }
+    }
+
+    async function captureFaceSnapshot() {
+      const video = document.getElementById('face-webcam');
+      if (!video || !faceCurrentGuestId) return;
+
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth || 640;
+      canvas.height = video.videoHeight || 480;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      const b64 = canvas.toDataURL('image/jpeg', 0.9);
+      await uploadFaceData(b64);
+    }
+
+    async function onFaceFilesSelected(files) {
+      if (!files || !files.length || !faceCurrentGuestId) return;
+
+      for (let file of Array.from(files).slice(0, 4)) {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          await uploadFaceData(e.target.result);
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+
+    async function uploadFaceData(b64) {
+      setFaceStatus('Procesando rostro con YuNet y SFace...', 'info');
+      try {
+        const res = await fetch(`/api/guest/${faceCurrentGuestId}/face`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: b64 }),
+        });
+        const data = await res.json();
+        if (data.status === 'ok') {
+          setFaceStatus('Rostro vectorizado y guardado exitosamente en MySQL', 'success');
+          loadGuestFaces(faceCurrentGuestId);
+        } else {
+          setFaceStatus(data.error || 'No se detectó un rostro claro en la imagen.', 'error');
+        }
+      } catch (err) {
+        setFaceStatus('Error procesando rostro: ' + err.message, 'error');
+      }
+    }
+
+    async function loadGuestFaces(id) {
+      const gal = document.getElementById('face-gallery-container');
+      const badge = document.getElementById('face-count-badge');
+      if (!gal) return;
+
+      try {
+        const res = await fetch(`/api/guest/${encodeURIComponent(id)}/faces`);
+        const data = await res.json();
+        const faces = data.faces || [];
+
+        if (badge) badge.textContent = `${faces.length} / 4`;
+
+        if (!faces.length) {
+          gal.innerHTML = `
+            <div class="col-span-4 border-2 border-dashed border-slate-200 rounded-xl p-4 text-center text-xs text-slate-400">
+              No hay fotos registradas para este asistente.
+            </div>`;
+          return;
+        }
+
+        gal.innerHTML = '';
+        faces.forEach((f, idx) => {
+          const imgSrc = f.thumb_url || f.url || f.image_url || f.thumb_data;
+          const imageId = f.image_id || f.id;
+          const card = document.createElement('div');
+          card.className = 'relative rounded-lg overflow-hidden border border-slate-200 bg-slate-100 aspect-square group shadow-xs';
+          card.innerHTML = `
+            <img src="${imgSrc}" class="w-full h-full object-cover" alt="Foto ${idx + 1}">
+            <button type="button" onclick="deleteFace('${imageId}')" class="absolute top-1 right-1 w-5 h-5 rounded-full bg-rose-600 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-rose-700 shadow-xs" title="Eliminar foto">
+              <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+          `;
+          gal.appendChild(card);
+        });
+      } catch (err) {
+        console.warn('Error cargando rostros:', err);
+      }
+    }
+
+    async function deleteFace(faceId) {
+      if (!confirm('¿Eliminar esta muestra facial?')) return;
+      try {
+        const res = await fetch(`/api/guest/${encodeURIComponent(faceCurrentGuestId)}/face?image_id=${encodeURIComponent(faceId)}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (data.status === 'ok') {
+          showToast('Foto eliminada', 'success');
+          loadGuestFaces(faceCurrentGuestId);
+        } else {
+          showToast('Error al eliminar foto', 'error');
+        }
+      } catch (err) {
+        showToast('Error: ' + err.message, 'error');
+      }
+    }
+
+    function setFaceStatus(msg, type) {
+      const el = document.getElementById('face-status-msg');
+      if (!el) return;
+      el.style.display = 'block';
+      el.textContent = msg;
+
+      if (type === 'error') {
+        el.className = 'p-3 rounded-lg text-xs font-medium bg-rose-50 text-rose-700 border border-rose-200';
+      } else if (type === 'success') {
+        el.className = 'p-3 rounded-lg text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200';
+      } else {
+        el.className = 'p-3 rounded-lg text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200';
+      }
+    }
+
+    // ── Multi-Evento ──────────────────────────────────────────────────────────
+    function openEventsModal() {
+      document.getElementById('events-modal').classList.add('open');
+      loadEventsList();
+    }
+
+    function closeEventsModal() {
+      document.getElementById('events-modal').classList.remove('open');
+    }
+
+    async function loadEventsList() {
+      const tbody = document.getElementById('events-table-body');
+      if (!tbody) return;
+
+      try {
+        const res = await fetch('/admin/api/events');
+        const data = await res.json();
+        const events = data.events || [];
+
+        if (!events.length) {
+          tbody.innerHTML = '<tr><td colspan="4" class="px-3 py-4 text-center text-slate-400">No hay eventos creados.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = '';
+        events.forEach(ev => {
+          const tr = document.createElement('tr');
+          tr.className = 'hover:bg-slate-50 transition-colors';
+          tr.innerHTML = `
+            <td class="px-3 py-2.5 font-semibold text-slate-900">
+              <div class="flex items-center gap-1.5">
+                ${ev.is_active ? '<span class="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>' : ''}
+                <span>${escapeHtml(ev.name)}</span>
+              </div>
+            </td>
+            <td class="px-3 py-2.5 text-slate-500">${escapeHtml(ev.location || '—')}</td>
+            <td class="px-3 py-2.5 text-slate-600 font-medium">${ev.guests_count || 0}</td>
+            <td class="px-3 py-2.5 text-right">
+              ${
+                ev.is_active
+                  ? '<span class="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">Activo</span>'
+                  : `<button type="button" onclick="setActiveEvent('${ev.id}')" class="px-2 py-1 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded transition-colors">Activar</button>`
+              }
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } catch (err) {
+        console.warn('Error cargando eventos:', err);
+      }
+    }
+
+    async function submitCreateEvent(e) {
+      e.preventDefault();
+      const name = document.getElementById('new-event-name').value.trim();
+      const location = document.getElementById('new-event-loc').value.trim();
+      const onedrive_url = document.getElementById('new-event-onedrive').value.trim();
+      const set_active = document.getElementById('new-event-active').checked;
+
+      if (!name) return;
+
+      try {
+        const res = await fetch('/admin/api/events', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, location, onedrive_url, set_active }),
+        });
+        const data = await res.json();
+        if (data.status === 'ok') {
+          showToast(`Evento "${name}" creado exitosamente`, 'success');
+          document.getElementById('new-event-name').value = '';
+          document.getElementById('new-event-loc').value = '';
+          document.getElementById('new-event-onedrive').value = '';
+          if (set_active) {
+            window.location.reload();
+          } else {
+            loadEventsList();
+          }
+        } else {
+          showToast(data.error || 'Error creando evento', 'error');
+        }
+      } catch (err) {
+        showToast('Error: ' + err.message, 'error');
+      }
+    }
+
+    async function setActiveEvent(eventId) {
+      try {
+        const res = await fetch(`/admin/api/events/${eventId}/activate`, { method: 'POST' });
+        const data = await res.json();
+        if (data.status === 'ok') {
+          showToast('Evento activo actualizado', 'success');
+          window.location.reload();
+        } else {
+          showToast('Error activando evento', 'error');
+        }
+      } catch (err) {
+        showToast('Error: ' + err.message, 'error');
+      }
+    }
+
+    // ── Importación y Subida de Invitados ─────────────────────────────────────
+    function openImportModal() {
+      document.getElementById('import-modal').classList.add('open');
+      switchImportTab('excel');
+    }
+
+    function closeImportModal() {
+      document.getElementById('import-modal').classList.remove('open');
+    }
+
+    function switchImportTab(tab) {
+      const tabs = ['excel', 'csv', 'onedrive', 'manual'];
+      tabs.forEach(t => {
+        const btn = document.getElementById(`tab-${t}-btn`);
+        const content = document.getElementById(`import-tab-${t}`);
+        if (t === tab) {
+          if (content) content.style.display = 'block';
+          if (btn) {
+            btn.className = 'flex-1 py-1.5 text-xs font-semibold rounded-md bg-white text-slate-900 shadow-xs';
+          }
+        } else {
+          if (content) content.style.display = 'none';
+          if (btn) {
+            btn.className = 'flex-1 py-1.5 text-xs font-medium rounded-md text-slate-600 hover:text-slate-900';
+          }
+        }
+      });
+    }
+
+    async function uploadExcelFile() {
+      const fileInput = document.getElementById('import-excel-file');
+      if (!fileInput || !fileInput.files.length) {
+        showToast('Por favor selecciona un archivo .xlsx', 'warn');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('file', fileInput.files[0]);
+
+      showToast('Procesando archivo Excel en memoria...', 'info');
+      try {
+        const res = await fetch('/admin/api/import/excel', {
+          method: 'POST',
+          body: formData,
+        });
+        const data = await res.json();
+        if (data.status === 'ok') {
+          showToast(data.message, 'success');
+          closeImportModal();
+          fileInput.value = '';
+          await loadGuests();
+        } else {
+          showToast(data.error || 'Error al procesar Excel', 'error');
+        }
+      } catch (err) {
+        showToast('Error de subida: ' + err.message, 'error');
+      }
+    }
+
+    async function uploadCsvFile() {
+      const fileInput = document.getElementById('import-csv-file');
+      if (!fileInput || !fileInput.files.length) {
+        showToast('Por favor selecciona un archivo .csv', 'warn');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('file', fileInput.files[0]);
+
+      showToast('Procesando archivo CSV...', 'info');
+      try {
+        const res = await fetch('/admin/api/import/csv', {
+          method: 'POST',
+          body: formData,
+        });
+        const data = await res.json();
+        if (data.status === 'ok') {
+          showToast(data.message, 'success');
+          closeImportModal();
+          fileInput.value = '';
+          await loadGuests();
+        } else {
+          showToast(data.error || 'Error al procesar CSV', 'error');
+        }
+      } catch (err) {
+        showToast('Error: ' + err.message, 'error');
+      }
+    }
+
+    async function submitOneDriveSync() {
+      const url = document.getElementById('import-onedrive-url').value.trim();
+      if (!url) {
+        showToast('Ingresa el enlace compartido de OneDrive / SharePoint', 'warn');
+        return;
+      }
+
+      showToast('Descargando y sincronizando desde OneDrive...', 'info');
+      try {
+        const res = await fetch('/admin/api/import/onedrive', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url }),
+        });
+        const data = await res.json();
+        if (data.status === 'ok') {
+          showToast(data.message, 'success');
+          closeImportModal();
+          await loadGuests();
+        } else {
+          showToast(data.error || 'Error sincronizando OneDrive', 'error');
+        }
+      } catch (err) {
+        showToast('Error: ' + err.message, 'error');
+      }
+    }
+
+    async function submitManualSingleGuest(e) {
+      e.preventDefault();
+      const code = document.getElementById('manual-guest-code').value.trim();
+      const name = document.getElementById('manual-guest-name').value.trim();
+      const category = document.getElementById('manual-guest-cat').value;
+      const company = document.getElementById('manual-guest-company').value.trim();
+      const position = document.getElementById('manual-guest-pos').value.trim();
+
+      if (!name) {
+        showToast('El nombre del invitado es obligatorio', 'warn');
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/guest', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: code || ('INV-' + Math.floor(1000 + Math.random() * 9000)),
+            name,
+            company,
+            position,
+            category,
+          }),
+        });
+        const data = await res.json();
+        if (data.status === 'ok') {
+          showToast('Invitado registrado exitosamente', 'success');
+          document.getElementById('import-manual-form').reset();
+          closeImportModal();
+          await loadGuests();
+        } else {
+          showToast(data.error || 'Error al guardar invitado', 'error');
+        }
+      } catch (err) {
+        showToast('Error: ' + err.message, 'error');
+      }
+    }
+
+    // ── Usuarios y RBAC ───────────────────────────────────────────────────────
+    function openUsersModal() {
+      document.getElementById('users-modal').classList.add('open');
+      loadUsersList();
+    }
+
+    function closeUsersModal() {
+      document.getElementById('users-modal').classList.remove('open');
+    }
+
+    function toggleNewUserForm() {
+      const box = document.getElementById('new-user-form-container');
+      if (!box) return;
+      box.style.display = box.style.display === 'none' ? 'block' : 'none';
+    }
+
+    async function loadUsersList() {
+      const tbody = document.getElementById('users-table-body');
+      if (!tbody) return;
+
+      try {
+        const res = await fetch('/admin/api/users');
+        const data = await res.json();
+        const users = data.users || [];
+
+        tbody.innerHTML = '';
+        users.forEach(u => {
+          const tr = document.createElement('tr');
+          tr.className = 'hover:bg-slate-50 transition-colors';
+          tr.innerHTML = `
+            <td class="px-3 py-2.5 font-semibold text-slate-900">${escapeHtml(u.username)}</td>
+            <td class="px-3 py-2.5">
+              <span class="px-2 py-0.5 rounded text-[11px] font-bold uppercase ${
+                u.role === 'SUPERADMIN' ? 'bg-purple-50 text-purple-700 border border-purple-200' :
+                u.role === 'ADMIN' ? 'bg-blue-50 text-blue-700 border border-blue-200' :
+                'bg-slate-100 text-slate-700'
+              }">${escapeHtml(u.role)}</span>
+            </td>
+            <td class="px-3 py-2.5 text-slate-500">${u.last_login_at ? new Date(u.last_login_at).toLocaleString('es') : '—'}</td>
+            <td class="px-3 py-2.5 text-right">
+              ${
+                u.username !== 'Admin'
+                  ? `<button type="button" onclick="deleteUser('${u.id}', '${escapeHtml(u.username)}')" class="text-rose-600 hover:text-rose-800 text-xs font-semibold">Eliminar</button>`
+                  : '<span class="text-slate-400 text-xs">Protegido</span>'
+              }
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } catch (err) {
+        console.warn('Error cargando usuarios:', err);
+      }
+    }
+
+    async function submitCreateUser(e) {
+      e.preventDefault();
+      const username = document.getElementById('new-user-name').value.trim();
+      const password = document.getElementById('new-user-pass').value;
+      const role = document.getElementById('new-user-role').value;
+      const email = document.getElementById('new-user-email').value.trim();
+
+      if (!username || !password) return;
+
+      try {
+        const res = await fetch('/admin/api/users', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password, role, email }),
+        });
+        const data = await res.json();
+        if (data.status === 'ok') {
+          showToast(`Usuario "${username}" creado exitosamente`, 'success');
+          document.getElementById('create-user-form').reset();
+          toggleNewUserForm();
+          loadUsersList();
+        } else {
+          showToast(data.error || 'Error al crear usuario', 'error');
+        }
+      } catch (err) {
+        showToast('Error: ' + err.message, 'error');
+      }
+    }
+
+    async function deleteUser(id, username) {
+      if (!confirm(`¿Eliminar al usuario "${username}"?`)) return;
+
+      try {
+        const res = await fetch(`/admin/api/users/${id}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (data.status === 'ok') {
+          showToast(`Usuario "${username}" eliminado`, 'success');
+          loadUsersList();
+        } else {
+          showToast(data.error || 'Error al eliminar usuario', 'error');
+        }
+      } catch (err) {
+        showToast('Error: ' + err.message, 'error');
+      }
+    }
+
+    // ── Auditoría y Analítica ─────────────────────────────────────────────────
+    function openAuditModal() {
+      document.getElementById('audit-modal').classList.add('open');
+      loadAnalytics();
+      loadAuditLogs();
+    }
+
+    function closeAuditModal() {
+      document.getElementById('audit-modal').classList.remove('open');
+    }
+
+    async function loadAnalytics() {
+      try {
+        const res = await fetch('/admin/api/analytics');
+        const data = await res.json();
+        if (data.status === 'ok') {
+          document.getElementById('analytics-total-guests').textContent = data.total_guests || 0;
+          document.getElementById('analytics-checked-in').textContent = data.checked_in || 0;
+          document.getElementById('analytics-attendance-pct').textContent = (data.attendance_rate || 0) + '%';
+
+          const chart = document.getElementById('analytics-hourly-chart');
+          const hourly = data.hourly_distribution || {};
+          const keys = Object.keys(hourly);
+
+          if (!keys.length) {
+            chart.innerHTML = '<span class="text-slate-400 py-4 w-full text-center">Sin ingresos registrados en este evento aún.</span>';
+          } else {
+            chart.innerHTML = '';
+            const maxVal = Math.max(...Object.values(hourly), 1);
+            keys.forEach(k => {
+              const count = hourly[k];
+              const hPct = Math.round((count / maxVal) * 100);
+              const bar = document.createElement('div');
+              bar.className = 'flex flex-col items-center flex-1 min-w-[28px]';
+              bar.innerHTML = `
+                <span class="text-[10px] font-bold text-blue-600 mb-1">${count}</span>
+                <div class="w-full bg-blue-100 rounded-t overflow-hidden h-16 flex items-end">
+                  <div class="w-full bg-blue-600 rounded-t" style="height: ${hPct}%;"></div>
+                </div>
+                <span class="text-[10px] text-slate-500 mt-1 font-mono">${k}h</span>
+              `;
+              chart.appendChild(bar);
+            });
+          }
+        }
+      } catch (err) {
+        console.warn('Error cargando analítica:', err);
+      }
+    }
+
+    async function loadAuditLogs() {
+      const tbody = document.getElementById('audit-logs-table-body');
+      if (!tbody) return;
+
+      try {
+        const res = await fetch('/admin/api/audit-logs');
+        const data = await res.json();
+        const logs = data.logs || [];
+
+        if (!logs.length) {
+          tbody.innerHTML = '<tr><td colspan="4" class="px-3 py-4 text-center text-slate-400">Sin registros de auditoría aún.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = '';
+        logs.slice(0, 50).forEach(log => {
+          const tr = document.createElement('tr');
+          tr.className = 'hover:bg-slate-50 transition-colors';
+          tr.innerHTML = `
+            <td class="px-3 py-2 text-slate-500 whitespace-nowrap">${log.created_at ? new Date(log.created_at).toLocaleTimeString('es') : '—'}</td>
+            <td class="px-3 py-2 font-semibold text-slate-800">${escapeHtml(log.action)}</td>
+            <td class="px-3 py-2 text-slate-600 truncate max-w-[240px]" title="${escapeHtml(log.details)}">${escapeHtml(log.details || '—')}</td>
+            <td class="px-3 py-2 font-mono text-slate-400 text-[11px]">${escapeHtml(log.ip_address || '—')}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } catch (err) {
+        console.warn('Error cargando logs:', err);
+      }
+    }
+
+    // ── Inicialización ────────────────────────────────────────────────────────
+    window.addEventListener('DOMContentLoaded', async () => {
+      await loadKioskSettings();
+      await loadPrinterStatus();
+      await loadGuests();
+
+      // Polling ligero para mantener sincronizado el estado del evento
+      setInterval(loadGuests, 10000);
+      setInterval(loadPrinterStatus, 15000);
+    });
+  </script>
 </body>
 </html>

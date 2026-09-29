@@ -182,6 +182,25 @@ def extract_face_feature(img_bgr: np.ndarray, min_area: int = 2500):
     return feature_norm, aligned_face, bbox, score
 
 
+def calibrate_sface_similarity(s: float) -> float:
+    """
+    Calibra la similitud coseno SFace (corte oficial de identidad: 0.363)
+    a una escala porcentual humana intuitiva (0.0 a 1.0).
+    - Cosine < 0.20 -> 0.0 a 0.35 (desconocido)
+    - Cosine ~ 0.363 -> 0.70 (corte oficial de identidad SFace = 70%)
+    - Cosine ~ 0.55 -> 0.85 (alta confianza)
+    - Cosine >= 0.75 -> 0.98+ (casi idéntica)
+    """
+    if s is None or s <= 0.0:
+        return 0.0
+    if s <= 0.20:
+        return float(max(0.0, s * 1.2))
+    if s < 0.363:
+        return float(0.24 + ((s - 0.20) / (0.363 - 0.20)) * (0.68 - 0.24))
+    ratio = (s - 0.363) / (0.75 - 0.363)
+    return float(min(0.99, max(0.70, 0.70 + ratio * 0.28)))
+
+
 def match_face(img_bgr: np.ndarray, threshold: float = DEFAULT_COSINE_THRESHOLD) -> tuple[str | None, float, list | None, float]:
     """Compara el rostro de la imagen con la base de embeddings precargada en memoria."""
     extracted = extract_face_feature(img_bgr)
@@ -207,10 +226,19 @@ def match_face(img_bgr: np.ndarray, threshold: float = DEFAULT_COSINE_THRESHOLD)
     best_code, best_sim = scores[0]
     top2_sim = scores[1][1] if len(scores) > 1 else 0.0
 
-    if best_sim >= threshold and (best_sim - top2_sim) >= MIN_AMBIGUITY_MARGIN:
-        return best_code, best_sim, bbox, top2_sim
+    calibrated_sim = calibrate_sface_similarity(best_sim)
 
-    return None, best_sim, bbox, top2_sim
+    # Si threshold >= 0.60, se evalúa contra la escala porcentual (ej. 0.70 = 70%) o si supera 0.50 coseno puro
+    # Si threshold < 0.60, se evalúa contra la similitud coseno pura directa
+    if threshold >= 0.60:
+        is_match = (calibrated_sim >= threshold) or (best_sim >= 0.50)
+    else:
+        is_match = (best_sim >= threshold)
+
+    if is_match and (best_sim - top2_sim) >= MIN_AMBIGUITY_MARGIN:
+        return best_code, calibrated_sim, bbox, top2_sim
+
+    return None, calibrated_sim, bbox, top2_sim
 
 
 def enroll_guest_face(guest: Guest, img_bgr: np.ndarray) -> tuple[bool, str, dict | None]:

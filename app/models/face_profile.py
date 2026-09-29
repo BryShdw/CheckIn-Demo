@@ -26,12 +26,17 @@ class FaceProfile(db.Model):
         self.embedding_json = json.dumps(embedding_list)
 
     def to_dict(self) -> dict:
+        code = self.guest.guest_code if self.guest else "guest"
+        fallback_url = f"/api/face-image/{code}/{self.thumb_filename}"
+        img_src = self.thumb_data if (self.thumb_data and self.thumb_data.startswith("data:image")) else fallback_url
         return {
+            "id": self.id,
             "image_id": self.image_id,
             "filename": self.filename,
             "thumb_filename": self.thumb_filename,
-            "thumb_url": self.thumb_data or self.thumb_filename,
-            "url": self.thumb_data or self.filename,
+            "thumb_url": img_src,
+            "url": img_src,
+            "image_url": img_src,
             "thumb_data": self.thumb_data,
             "quality_score": self.quality_score,
             "created_at": self.created_at.isoformat() if self.created_at else None,
