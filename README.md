@@ -1,132 +1,174 @@
-# 🎟️ Sistema de Acreditación Inteligente CheckIn-DACER (MySQL + Facial + QR + Impresión Brother)
+# Sistema de Acreditacion Inteligente CheckIn
 
-Plataforma empresarial de acreditación y control de acceso para eventos corporativos y masivos. Cuenta con **reconocimiento facial por visión artificial en CPU**, **escaneo de credenciales QR**, persistencia transaccional en **MySQL**, **gestión multi-evento**, **cuatro métodos de carga de asistentes** (incluyendo integración directa con **OneDrive / SharePoint**) e **impresión térmica de credenciales en Brother QL-800** con rollo DK-1208 (38 mm × 90.3 mm).
-
-Diseñado para ejecutarse en una **Intel NUC con Windows 10 / 11** conectada a la impresora Brother oficial por puerto USB.
+Plataforma empresarial de acreditacion y control de acceso para eventos corporativos y masivos. El sistema integra reconocimiento facial mediante vision por computador en CPU (YuNet + SFace), lectura optica de credenciales QR, persistencia transaccional en MySQL 8, gestion multi-evento, sincronizacion con Microsoft OneDrive / SharePoint e impresion termica de alta velocidad en hardware Brother QL-800 con rollo DK-1208 (38 mm x 90.3 mm).
 
 ---
 
-## 🚀 Novedades de la Rama `feature/mysql-security-architecture`
+## 1. Caracteristicas Principales
 
-1. **Migración a Base de Datos Relacional MySQL**:
-   - Transiciones desde archivos planos hacia una base de datos relacional MySQL (`checkin_dacer_db`) con transacciones ACID, índices optimizados y soporte completo UTF-8 (`utf8mb4`).
-2. **Autenticación y Seguridad Empresarial**:
-   - Control de acceso basado en roles (**SUPERADMIN**, **ADMIN**, **OPERATOR**).
-   - Hashing criptográfico de contraseñas con **PBKDF2/SHA256**.
-   - Credenciales iniciales por defecto (`Admin` / `000000`) con **cambio forzado obligatorio** en el primer inicio de sesión.
-   - Protección contra falsificación de peticiones (**Flask-WTF CSRF**) y limitador de tasa (**Flask-Limiter**).
-   - Registro forense inmutable de acciones en tabla de auditoría (`audit_logs`).
-3. **Gestión Multi-Evento**:
-   - Cada asistente, asistencia y configuración pertenece explícitamente a un evento.
-   - Selector y creador de eventos integrado en el panel con estadísticas en tiempo real (% asistencia, totales y acreditados).
-   - Conmutación en caliente del evento activo, recargando automáticamente la memoria del modelo biométrico.
-4. **Múltiples Métodos de Carga de Asistentes**:
-   - **📁 Archivo Excel (.xlsx) / CSV (.csv)**: Mapeo inteligente de encabezados (ID, Nombre, Empresa, Cargo, Correo, Teléfono).
-   - **☁️ Enlace OneDrive / SharePoint**: Resolvedor inteligente que transforma enlaces compartidos corporativos a descarga directa (`?download=1`), evitando errores de migración o bloqueos (solución a error HTTP 308).
-   - **👤 Registro Individual**: Formulario rápido para acreditar o agregar asistentes de último minuto en sala.
-5. **Reconocimiento Facial de Alta Precisión (Umbral 0.70)**:
-   - OpenCV DNN con redes neuronales **YuNet** (detección de rostro y landmarks) y **SFace** (vector de características de 128 dimensiones).
-   - Umbral biométrico calibrado por defecto en **0.70** para garantizar máxima especificidad y eliminar falsos positivos.
-   - Enrolamiento de 1 a 4 fotos por persona desde cámara web o subida de imágenes.
-6. **Flujo de Check-in Vinculado a la Impresión Térmica**:
-   - Renderizado nativo a 300 DPI mediante el spooler de Windows GDI (`win32print`), adaptado exclusivamente para etiquetas pre-impresas en rollo **DK-1208** (Nombre completo destacado, Empresa y Cargo, sin elementos distractores).
-   - La asistencia se confirma únicamente tras la emisión exitosa del ticket.
+1. **Persistencia Relacional en MySQL 8**:
+   - Transacciones ACID seguras con soporte integral de caracteres UTF-8 (`utf8mb4`).
+   - Esquema modular compuesto por tablas de eventos, asistentes, perfiles biometricos, asistencias validadas, usuarios y registros inmutables de auditoria.
+
+2. **Seguridad y Control de Acceso por Roles (RBAC)**:
+   - Tres niveles jerarquicos: SUPERADMIN, ADMIN y OPERATOR.
+   - Hashing criptografico seguro de credenciales con Argon2id.
+   - Forzado de actualizacion de contrasena en el primer inicio de sesion.
+   - Proteccion CSRF en formularios web y control estricto de sesiones HTTP.
+
+3. **Biometria Facial en Tiempo Real (CPU)**:
+   - Pipeline de vision artificial basado en OpenCV DNN con modelos ONNX oficiales: YuNet (deteccion de rostro) y SFace (extraccion de vectores de 128 dimensiones).
+   - Umbral de similitud coseno calibrado en 0.70 para eliminar falsos positivos.
+   - Cache de embeddings en memoria RAM para cotejos inmediatos sin latencia de disco.
+
+4. **Impresion Termica Directa (Brother QL-800)**:
+   - Integracion nativa con el subsistema GDI de Windows (`win32print`) a 300 DPI.
+   - Disenador de credenciales visual y personalizable por evento con ajuste automatico de fuentes (`fit_font`) y particion de nombres extensos.
+   - Regla estricta de negocio: la asistencia solo se valida en la base de datos si la impresion fisica de la credencial concluye satisfactoriamente.
+
+5. **Importacion y Sincronizacion Flexible**:
+   - Carga de archivos locales en formatos Excel (.xlsx) y CSV con autodeteccion inteligente de columnas.
+   - Sincronizacion directa con hojas de calculo compartidas en Microsoft OneDrive / SharePoint sin requerir descargas manuales intermedias.
 
 ---
 
-## 🏛️ Arquitectura del Sistema
+## 2. Arquitectura General del Sistema
 
 ```
-                   [ Microsoft OneDrive / SharePoint ]
-                   (Enlaces compartidos o archivos .xlsx / .csv)
-                                     │
-                                     ▼ (Sincronización directa ?download=1)
-┌──────────────────────────────────────────────────────────────────────────────────┐
-│                             NUC (Windows 10 / 11)                                │
-│                                                                                  │
-│   MySQL 8.0+ (checkin_dacer_db)                                                  │
-│   ├── users             (Roles, hashes PBKDF2, must_change_password)             │
-│   ├── events            (Eventos activos, metadatos, caché)                      │
-│   ├── guests            (Asistentes vinculados a event_id)                       │
-│   ├── checkins          (Asistencias, método QR/Facial, timestamp)               │
-│   ├── face_profiles     (Embeddings 128D vinculados a invitados)                 │
-│   ├── kiosk_settings    (Modo, método de escaneo, umbral 0.70)                   │
-│   └── audit_logs        (Auditoría forense inmutable)                            │
-│                                                                                  │
-│   Backend Modular Flask (Application Factory)                                    │
-│   ├── blueprints/ (kiosk, admin, auth, api)                                      │
-│   └── services/   (face_service, import_service, printer_service, guest_service) │
-│                                                                                  │
-│                    ┌──────────────────┴──────────────────┐                       │
-│                    ▼                                     ▼                       │
-│          Kiosko Autoservicio                     Panel de Control                │
-│             (index.html)                           (admin.html)                  │
-└────────────────────┬─────────────────────────────────────┬───────────────────────┘
-                     │                                     │
-                     └──────────────────┬──────────────────┘
-                                        ▼
-                           Windows GDI Print Spooler
-                               (win32print)
-                                        │
-                                        ▼
-                         Impresora Brother QL-800
-                       Rollo DK-1208 (38mm × 90.3mm)
+                    [ Microsoft OneDrive / SharePoint ]
+                    (Enlaces compartidos .xlsx / .csv)
+                                     |
+                                     v (Sincronizacion directa)
++-------------------------------------------------------------------------------+
+|                       COMPUTADOR ANFITRION (WINDOWS 10 / 11)                   |
+|                                                                               |
+|  MySQL 8.0+ (checkin_db)                                                      |
+|  +-- users (Roles RBAC, contraseñas Argon2id, banderas de seguridad)          |
+|  +-- events (Eventos activos, metadatos, plantillas JSON de credenciales)     |
+|  +-- guests (Lista de asistentes vinculados al evento)                        |
+|  +-- checkins (Transacciones de ingreso, metodo, timestamp, IP)               |
+|  +-- face_profiles (Embeddings biometricos de 128D)                           |
+|  +-- kiosk_settings (Modo operativo, umbrales y metodos)                      |
+|  +-- audit_logs (Trazabilidad inmutable de operaciones del sistema)           |
+|                                                                               |
+|  Backend Flask Modular (Application Factory)                                  |
+|  +-- Blueprints: Kiosk, Admin, Auth, API                                      |
+|  +-- Servicios: face_service, printer_service, guest_service, import_service  |
+|                                                                               |
+|        +--------------------------------+-------------------------------+     |
+|        |                                                                |     |
+|        v                                                                v     |
+|  Kiosko de Autoservicio / Totem                          Panel Administrativo |
+|  (/kiosk - Pantalla completa)                            (/admin - Gestion)   |
++-------------------------------------------------------------------------------+
+                                 |
+                                 v
+                     Subsistema Spooler Windows GDI
+                              (win32print)
+                                 |
+                                 v
+                      Impresora Brother QL-800
+                    Rollo DK-1208 (38mm x 90.3mm)
 ```
 
 ---
 
-## 💻 Puesta en Marcha Rápida en la NUC
+## 3. Guia de Replicacion y Puesta en Marcha en Nuevas Computadoras
 
-### 1. Requisitos
-- **Windows 10 / 11** (64 bits).
-- **Python 3.10+**.
-- **MySQL Server 8.0+** corriendo en el puerto 3306 (`root` / `root`).
-- Impresora **Brother QL-800** con rollo DK-1208 instalada en Windows.
+Para instalar y ejecutar el sistema en una nueva computadora (Laptop, Mini PC, Intel NUC o Totem):
 
-### 2. Base de Datos en MySQL
-Crea la base de datos si no existe:
-```sql
-CREATE DATABASE IF NOT EXISTS checkin_dacer_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-```
+### Paso 1: Requisitos de Software
+- Windows 10 o Windows 11 de 64 bits.
+- Python 3.10 o superior (marcar la opcion "Add python.exe to PATH" durante la instalacion).
+- MySQL Server 8.0 o superior (puerto predeterminado 3306).
+- Controlador oficial de la impresora Brother QL-800 instalado en Windows.
 
-### 3. Configurar Entorno e Instalar Dependencias
+### Paso 2: Clonar el Repositorio y Configurar Entorno
+Abra PowerShell en la carpeta donde instalara el proyecto:
 ```powershell
-# 1. Situarse en la rama
-git checkout feature/mysql-security-architecture
-
-# 2. Crear y activar entorno virtual
+# Crear y activar el entorno virtual
 python -m venv venv
 .\venv\Scripts\Activate.ps1
 
-# 3. Instalar librerías
+# Actualizar pip e instalar dependencias requeridas
+pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-### 4. Ejecutar la Suite de Verificación Integral
+### Paso 3: Inicializar la Base de Datos MySQL
+En su cliente de MySQL, ejecute el script de definicion de datos:
+```sql
+CREATE DATABASE checkin_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
+Importe el esquema inicial ejecutando desde la raiz del proyecto:
+```bash
+mysql -u root -p checkin_db < database/schema.sql
+```
+
+### Paso 4: Configurar Variables de Entorno (`.env`)
+Cree o modifique el archivo `.env` en la raiz del proyecto:
+```ini
+FLASK_ENV=production
+FLASK_DEBUG=0
+SECRET_KEY=clave_secreta_de_al_menos_32_caracteres_aleatorios_y_seguros
+
+# Cadena de conexion a MySQL
+DATABASE_URL=mysql+pymysql://root:password123@localhost:3306/checkin_db
+
+# Configuracion de Impresora
+PRINTER_ENABLED=true
+PRINTER_NAME=Brother QL-800
+
+# Parametros Biometricos
+DEFAULT_FACE_THRESHOLD=0.70
+FACE_TOP2_MARGIN=0.08
+YUNET_MODEL_PATH=models/face_detection_yunet.onnx
+SFACE_MODEL_PATH=models/face_recognition_sface.onnx
+```
+
+### Paso 5: Validar la Instalacion con la Suite de Pruebas
+Ejecute las 10 pruebas integrales automatizadas:
 ```powershell
 python test_full_system.py
 ```
-*Debe reportar: `¡TODAS LAS PRUEBAS DE INTEGRACIÓN Y SEGURIDAD PASARON (10/10)!`*.
+Verifique que el resultado sea: `10 passed`.
 
-### 5. Iniciar la Aplicación
+### Paso 6: Iniciar el Sistema
+Para arrancar el servidor en modo produccion/desarrollo local:
 ```powershell
-python run.py
+python app.py
+```
+O ejecutando el archivo por lotes:
+```powershell
+.\iniciar_sistema.bat
 ```
 
-- **Kiosko de Autoservicio**: [http://localhost:5000/](http://localhost:5000/)
-- **Panel Administrativo**: [http://localhost:5000/admin/](http://localhost:5000/admin/)
+### Paso 7: Acceso a las Interfaces
+- **Panel Administrativo**: `http://localhost:5000/admin`
+  - Usuario por defecto: `admin`
+  - Contrasena temporal: `Admin2026!` (Se solicitara cambio inmediato al primer ingreso).
+- **Kiosko de Autoservicio / Totem**: `http://localhost:5000/kiosk`
+  - Para desplegarlo en modo kiosko pantalla completa en Chrome:
+    ```cmd
+    chrome.exe --kiosk --kiosk-printing "http://localhost:5000/kiosk"
+    ```
 
 ---
 
-## 🔑 Credenciales Iniciales de Administrador
+## 4. Estructura de Documentacion Detallada (`docs/`)
 
-- **Usuario**: `Admin`
-- **Contraseña Inicial**: `000000`
-- **Nota de Seguridad**: Al iniciar sesión por primera vez, el sistema redirige de forma obligatoria a la pantalla de cambio de clave (`/auth/change-password`). No se permite el acceso al panel hasta registrar una contraseña segura.
+Para profundizar en la arquitectura y detalles tecnicos especificos, consulte los manuales ubicados en el directorio `docs/`:
+
+- [docs/01_arquitectura_del_sistema.md](file:///c:/Users/braya/PROYECTS/Checkin-Demo/docs/01_arquitectura_del_sistema.md): Diseno de software, Application Factory, modelos relacionales y politicas de seguridad.
+- [docs/02_biometria_y_procesamiento_facial.md](file:///c:/Users/braya/PROYECTS/Checkin-Demo/docs/02_biometria_y_procesamiento_facial.md): Modelos YuNet y SFace, extraccion de caracteristicas y calibracion de umbrales.
+- [docs/03_impresion_y_hardware_brother.md](file:///c:/Users/braya/PROYECTS/Checkin-Demo/docs/03_impresion_y_hardware_brother.md): Hardware Brother QL-800, spooler GDI, diseno de credenciales y resolucion de fallos.
+- [docs/04_guia_despliegue_y_replicacion.md](file:///c:/Users/braya/PROYECTS/Checkin-Demo/docs/04_guia_despliegue_y_replicacion.md): Manual paso a paso para desplegar en computadoras nuevas desde cero.
+- [docs/05_referencia_api_rest.md](file:///c:/Users/braya/PROYECTS/Checkin-Demo/docs/05_referencia_api_rest.md): Catalogo completo de endpoints HTTP, parametros JSON y codigos de estado.
+- [docs/06_manual_de_usuario_y_operaciones.md](file:///c:/Users/braya/PROYECTS/Checkin-Demo/docs/06_manual_de_usuario_y_operaciones.md): Guia de usuario para operadores, coordinadores y personal de recepcion.
+- [status.md](file:///c:/Users/braya/PROYECTS/Checkin-Demo/status.md): Estado actual del proyecto, checklist de modulos y certificacion de pruebas.
 
 ---
 
-## 📖 Documentación Detallada
+## 5. Limpieza y Mantenimiento
 
-Para una explicación exhaustiva de cada módulo, diagramas de secuencia detallados, esquemas de base de datos y flujos de datos paso a paso, consulta el documento:
-👉 **[ARQUITECTURA_Y_FUNCIONAMIENTO.md](file:///c:/Users/braya/PROYECTS/Checkin-Demo/ARQUITECTURA_Y_FUNCIONAMIENTO.md)**
+Para mantener el entorno limpio, el proyecto no almacena copias redundantes ni archivos temporales en los directorios de control de versiones. Todas las descargas de sincronizacion y transformaciones graficas se realizan en memoria dinamica (RAM).
